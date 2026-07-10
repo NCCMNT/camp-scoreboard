@@ -5,5 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi>=0.139.0",
+    "gspread>=5.12.4",
+    "pandas>=3.0.3",
+    "st-gsheets-connection>=0.1.0",
     "streamlit>=1.59.0",
+    "uvicorn>=0.50.2",
 ]
