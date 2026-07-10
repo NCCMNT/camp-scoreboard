@@ -1,0 +1,229 @@
+/* --- DESERT NIGHT THEME VARIABLE PALETTE --- */
+:root {
+    --bg-main: #1c1a17;          /* Deep clay charcoal background */
+    --bg-card: #26221d;          /* Warm sand-stone card background */
+    --border: #3d352b;           /* Muted canyon rock border */
+    --text: #f4eae0;             /* Bleached sand light text */
+    --muted: #a69685;            /* Soft dust / dry brush gray */
+    --accent: #d96b43;           /* Terracotta / Sunset Orange */
+    --first: #e9c244;
+    --second: #999999;
+    --accent-glow: rgba(217, 107, 67, 0.15);
+    --success: #6e8467;          /* Desert Sage Green */
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.5;
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+}
+
+/* Base Responsive Container Wrapper */
+.block-container {
+    width: 100%;
+    max-width: 680px;
+    margin-top: 2rem;
+}
+
+/* --- HERO SHELL HEADER --- */
+.hero-shell {
+    padding: 1.5rem 0;
+    text-align: left;
+}
+
+.hero-kicker {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15rem;
+    margin-bottom: 0.25rem;
+}
+
+h1, h2 {
+    font-weight: 800;
+    letter-spacing: -0.03rem;
+    color: var(--text);
+}
+
+h1 { font-size: 2.25rem; margin-bottom: 0.5rem; }
+h2 { font-size: 1.5rem; }
+
+.hero-copy {
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background-color: var(--border);
+    margin: 1.75rem 0;
+}
+
+/* --- INTERACTIVE METRIC COMPONENTS --- */
+[data-testid="stMetric"] {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+}
+
+[data-testid="stMetric"] label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+    margin-bottom: 0.25rem;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* --- LEADERBOARD CARD ROWS --- */
+[data-testid="stContainer"] {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    overflow: hidden;
+}
+
+[data-testid="stContainer"]:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.team-rank {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-glow);
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    margin-bottom: 0.25rem;
+}
+
+.team-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.score-pill {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.score-pill span {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+/* --- COUNSELOR INTERFACE FORMS --- */
+[data-testid="stForm"] {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+}
+
+.counselor-team {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+input[type="password"], input[type="number"] {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.5rem;
+    font-family: var(--font);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+input:focus {
+    border-color: var(--accent);
+}
+
+button {
+    background-color: var(--accent);
+    color: #ffffff;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+hr {
+    border: none;
+}
+
+/* --- SUBTLE PODIUM POSITION HIGHLIGHTS --- */
+
+/* 1st Place: Subtle Terracotta scale and warm sunset gradient splash */
+[data-testid="stContainer"].team-tile.rank-1 {
+    transform: scale(1.02);
+    border-color: var(--first);
+    background: linear-gradient(135deg, var(--bg-card) 75%, rgba(217, 107, 67, 0.08) 100%);
+}
+[data-testid="stContainer"].team-tile.rank-1 .team-title {
+    color: var(--first);
+}
+[data-testid="stContainer"].team-tile.rank-1 .team-position {
+    color: var(--first);
+}
+
+/* 2nd Place: Marginally larger layout with soft desert sage green splash */
+[data-testid="stContainer"].team-tile.rank-2 {
+    transform: scale(1.01);
+    border-color: var(--second);
+    background: linear-gradient(135deg, var(--bg-card) 75%, rgba(110, 132, 103, 0.06) 100%);
+}
+[data-testid="stContainer"].team-tile.rank-2 .team-title {
+    color: var(--second);
+}
+[data-testid="stContainer"].team-tile.rank-2 .team-position {
+    color: var(--second);
+}
+
+/* Keep hover states consistent across the podium ranks */
+[data-testid="stContainer"].team-tile.rank-1:hover {
+    transform: scale(1.03) translateY(-2px);
+}
+[data-testid="stContainer"].team-tile.rank-2:hover {
+    transform: scale(1.02) translateY(-2px);
+}

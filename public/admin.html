@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funtime Control Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .controls-list {
+            display: grid;
+            gap: 0.9rem;
+        }
+
+        .control-tile {
+            display: grid;
+            grid-template-columns: minmax(3.5rem, auto) 1fr auto;
+            align-items: center;
+            gap: 1rem;
+            min-height: 5rem;
+            padding: 1rem 1.1rem;
+        }
+
+        .team-position {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--accent);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .team-title {
+            font-size: clamp(1.15rem, 2.5vw, 1.65rem);
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+        .control-meta {
+            display: grid;
+            justify-items: end;
+            gap: 0.6rem;
+        }
+
+        .current-points {
+            font-size: clamp(1.35rem, 3vw, 1.9rem);
+            font-weight: 900;
+            color: var(--text);
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .current-points span {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08rem;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .change-control {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: nowrap;
+        }
+
+        .change-value {
+            width: 4.25rem;
+            text-align: center;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.55rem 0.35rem;
+            font-family: var(--font);
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .change-value::-webkit-outer-spin-button,
+        .change-value::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .change-value {
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        .change-button {
+            width: 2.5rem;
+            padding: 0.55rem 0;
+        }
+
+        .apply-button {
+            padding-inline: 1rem;
+            background-color: #be3300;
+        }
+
+        .saving-status {
+            min-height: 1rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .saving-status.is-visible {
+            opacity: 1;
+        }
+
+        .apply-button:disabled,
+        .change-button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 640px) {
+            .control-tile {
+                grid-template-columns: 2.5rem 1fr;
+                grid-template-areas:
+                    "position meta"
+                    "title title"
+                    "controls controls";
+                gap: 0.65rem 0.9rem;
+            }
+
+            .team-position {
+                grid-area: position;
+            }
+
+            .team-title {
+                grid-area: title;
+                text-align: left;
+            }
+
+            .control-meta {
+                grid-area: meta;
+            }
+
+            .change-control {
+                grid-area: controls;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="block-container">
+        <!-- Auth View Container -->
+        <div id="login-section" data-testid="stForm" style="max-width: 450px; margin: 4rem auto; display: block;">
+            <h2>Counselor Access</h2>
+            <p style="color: var(--muted);">Enter the camp PIN to unlock score updates.</p>
+            <input type="password" id="pin-input" placeholder="Enter PIN" style="width: 100%; margin: 1rem 0; padding: 0.7rem;">
+            <button onclick="handleLogin()" style="width: 100%;">Login</button>
+        </div>
+
+        <!-- Authenticated Controls View Container -->
+        <div id="controls-section" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Control Panel</h2>
+                <button onclick="handleLogout()" style="background: transparent; color: var(--text); border: 1px solid var(--border);">Logout</button>
+            </div>
+            <hr>
+            <div id="counselor-rows" class="controls-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const teamLookup = {};
+
+        function getTeamName(row) {
+            return row.Team ?? row.team_name ?? row.team ?? 'Unknown Team';
+        }
+
+        function getPoints(row) {
+            const value = row.Points ?? row.points_summed ?? row.points ?? 0;
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function getCleanKey(teamName) {
+            return teamName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+        }
+
+        function getChangeValue(cleanKey) {
+            return Number(document.getElementById(`input-${cleanKey}`).value || 0);
+        }
+
+        function setChangeValue(cleanKey, value) {
+            document.getElementById(`input-${cleanKey}`).value = value;
+        }
+
+        function setSavingState(cleanKey, isSaving) {
+            const status = document.getElementById(`status-${cleanKey}`);
+            const applyButton = document.getElementById(`apply-${cleanKey}`);
+            const minusButton = document.getElementById(`minus-${cleanKey}`);
+            const plusButton = document.getElementById(`plus-${cleanKey}`);
+            const input = document.getElementById(`input-${cleanKey}`);
+
+            if (status) {
+                status.textContent = isSaving ? 'Saving new score...' : '';
+                status.classList.toggle('is-visible', isSaving);
+            }
+
+            if (applyButton) applyButton.disabled = isSaving;
+            if (minusButton) minusButton.disabled = isSaving;
+            if (plusButton) plusButton.disabled = isSaving;
+            if (input) input.disabled = isSaving;
+        }
+
+        function bindChangeInput(cleanKey) {
+            const input = document.getElementById(`input-${cleanKey}`);
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitScore(cleanKey);
+                }
+            });
+        }
+
+        function adjustChange(cleanKey, delta) {
+            setChangeValue(cleanKey, getChangeValue(cleanKey) + delta);
+        }
+
+        async function checkAuth() {
+            const res = await fetch('/api/auth', { credentials: 'same-origin' });
+            if (res.ok) {
+                loadCounselorPanel();
+                return;
+            }
+
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('controls-section').style.display = 'none';
+        }
+
+        async function handleLogin() {
+            const pin = document.getElementById('pin-input').value;
+            const formData = new FormData();
+            formData.append('pin', pin);
+
+            const res = await fetch('/api/login', { method: 'POST', body: formData, credentials: 'same-origin' });
+            if(res.ok) {
+                loadCounselorPanel();
+            } else {
+                alert('Incorrect Camp PIN');
+            }
+        }
+
+        async function handleLogout() {
+            await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+            window.location.reload();
+        }
+
+        async function loadCounselorPanel() {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('controls-section').style.display = 'block';
+
+            const res = await fetch('/api/scores', { credentials: 'same-origin' });
+            const data = await res.json();
+            data.sort((a, b) => getTeamName(a).localeCompare(getTeamName(b)));
+
+            const container = document.getElementById('counselor-rows');
+            container.innerHTML = '';
+
+            data.forEach((row, index) => {
+                const teamName = getTeamName(row);
+                const points = getPoints(row);
+                const cleanKey = getCleanKey(teamName);
+                teamLookup[cleanKey] = teamName;
+                container.innerHTML += `
+                    <div data-testid="stForm" class="control-tile">
+                        <div class="team-title">${teamName}</div>
+                        <div class="control-meta">
+                            <div class="current-points" id="pts-${cleanKey}">${points}<span>Current Points</span></div>
+                            <div class="change-control">
+                                <input type="number" id="input-${cleanKey}" class="change-value" value="0" step="1">
+                                <button type="button" id="minus-${cleanKey}" class="change-button minus-button" onclick="adjustChange('${cleanKey}', -1)">-</button>
+                                <button type="button" id="plus-${cleanKey}" class="change-button plus-button" onclick="adjustChange('${cleanKey}', 1)">+</button>
+                                <button type="button" id="apply-${cleanKey}" class="apply-button" onclick="submitScore('${cleanKey}')">Apply</button>
+                            </div>
+                            <div id="status-${cleanKey}" class="saving-status"></div>
+                        </div>
+                    </div>
+                `;
+                bindChangeInput(cleanKey);
+            });
+        }
+
+        async function submitScore(cleanKey) {
+            const teamName = teamLookup[cleanKey];
+            const val = getChangeValue(cleanKey);
+            if (val === 0) return alert('Enter a value first.');
+
+            setSavingState(cleanKey, true);
+
+            try {
+                const formData = new FormData();
+                formData.append('team', teamName);
+                formData.append('change', val);
+
+                const res = await fetch('/api/update-score', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (error) {
+                    data = null;
+                }
+
+                if (res.ok) {
+                    // Instantly update the single text string element on screen with the new value!
+                    document.getElementById(`pts-${cleanKey}`).innerHTML = `${data.new_score}<span>Current Points</span>`;
+                    setChangeValue(cleanKey, 0);
+                } else {
+                    alert(data?.detail ?? 'Session expired or error saving update.');
+                    checkAuth();
+                }
+            } finally {
+                setSavingState(cleanKey, false);
+            }
+        }
+        checkAuth();
+    </script>
+</body>
+</html>
