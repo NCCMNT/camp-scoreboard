@@ -122,6 +122,19 @@
             cursor: not-allowed;
         }
 
+        #controls-section h2 {
+            margin-bottom: 1.25rem;
+        }
+
+        .logout-button {
+            display: block;
+            width: 100%;
+            margin-top: 1.75rem;
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
         @media (max-width: 640px) {
             .control-tile {
                 grid-template-columns: 2.5rem 1fr;
@@ -158,19 +171,16 @@
         <!-- Auth View Container -->
         <div id="login-section" data-testid="stForm" style="max-width: 450px; margin: 4rem auto; display: block;">
             <h2>Counselor Access</h2>
-            <p style="color: var(--muted);">Enter the camp PIN to unlock score updates.</p>
+            <p style="color: var(--muted);">Enter the PIN to unlock score updates.</p>
             <input type="password" id="pin-input" placeholder="Enter PIN" style="width: 100%; margin: 1rem 0; padding: 0.7rem;">
             <button onclick="handleLogin()" style="width: 100%;">Login</button>
         </div>
 
         <!-- Authenticated Controls View Container -->
         <div id="controls-section" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>Control Panel</h2>
-                <button onclick="handleLogout()" style="background: transparent; color: var(--text); border: 1px solid var(--border);">Logout</button>
-            </div>
-            <hr>
+            <h2 style="text-align: center;">Control Panel</h2>
             <div id="counselor-rows" class="controls-list"></div>
+            <button onclick="handleLogout()" class="logout-button">Logout</button>
         </div>
     </div>
 
@@ -179,6 +189,10 @@
 
         function getTeamName(row) {
             return row.Team ?? row.team_name ?? row.team ?? 'Unknown Team';
+        }
+
+        function getLeader(row) {
+            return row.LEADER_COLUMN ?? row.leader ?? 'No Leader Assigned';
         }
 
         function getPoints(row) {
@@ -266,6 +280,7 @@
 
             const res = await fetch('/api/scores', { credentials: 'same-origin' });
             const data = await res.json();
+
             data.sort((a, b) => getTeamName(a).localeCompare(getTeamName(b)));
 
             const container = document.getElementById('counselor-rows');
@@ -275,10 +290,15 @@
                 const teamName = getTeamName(row);
                 const points = getPoints(row);
                 const cleanKey = getCleanKey(teamName);
+                const leaderName = getLeader(row);
                 teamLookup[cleanKey] = teamName;
                 container.innerHTML += `
                     <div data-testid="stForm" class="control-tile">
-                        <div class="team-title">${teamName}</div>
+                        <div style="display: flex; flex-direction: column; width: 100%;">
+                            <div class="team-title" style="text-align: left; margin: 0;">${teamName}</div>
+                            <div style="color: var(--muted); font-size: 0.9rem; margin-top: 0.2rem; margin-bottom: 0.75rem; text-align: left;">${leaderName}</div>
+                        </div>
+
                         <div class="control-meta">
                             <div class="current-points" id="pts-${cleanKey}">${points}<span>Current Points</span></div>
                             <div class="change-control">

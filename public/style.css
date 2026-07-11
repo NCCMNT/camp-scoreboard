@@ -27,6 +27,7 @@ body {
     padding: 1rem;
     display: flex;
     justify-content: center;
+    min-height: 100vh;
 }
 
 /* Base Responsive Container Wrapper */
@@ -34,6 +35,8 @@ body {
     width: 100%;
     max-width: 680px;
     margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- HERO SHELL HEADER --- */

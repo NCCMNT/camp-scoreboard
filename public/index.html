@@ -6,22 +6,27 @@
     <title>Camp Arena - Leaderboard</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        .block-container {
+            max-width: 1100px;
+        }
+
         .leaderboard-list {
             display: grid;
-            gap: 0.9rem;
+            gap: 1.25rem;
+            flex: 1;
         }
 
         .team-tile {
             display: grid;
-            grid-template-columns: minmax(3.5rem, auto) 1fr auto;
+            grid-template-columns: minmax(4.5rem, auto) 1fr auto;
             align-items: center;
-            gap: 1rem;
-            min-height: 5rem;
-            padding: 1rem 1.1rem;
+            gap: 1.5rem;
+            min-height: 9rem;
+            padding: 1.75rem 2rem;
         }
 
         .team-position {
-            font-size: 1.1rem;
+            font-size: 1.6rem;
             font-weight: 800;
             color: var(--accent);
             text-align: left;
@@ -29,7 +34,7 @@
         }
 
         .team-title {
-            font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+            font-size: clamp(1.75rem, 4vw, 2.75rem);
             font-weight: 800;
             text-align: center;
             letter-spacing: -0.02em;
@@ -38,7 +43,7 @@
 
         .team-points {
             justify-self: end;
-            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-size: clamp(2rem, 5vw, 3.25rem);
             font-weight: 900;
             color: var(--text);
             text-align: right;
@@ -46,22 +51,42 @@
         }
 
         .team-points span {
-            display: block;
-            margin-top: 0.15rem;
-            font-size: 0.68rem;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.3rem;
+            white-space: nowrap;
+            margin-top: 0.2rem;
+            font-size: 0.85rem;
             font-weight: 700;
             letter-spacing: 0.08rem;
             text-transform: uppercase;
             color: var(--muted);
         }
 
+        .trend-arrow {
+            display: inline-block;
+            font-size: 1.3em;
+            line-height: 1;
+        }
+
+        .trend-arrow.trend-up {
+            color: var(--success);
+        }
+
+        .trend-arrow.trend-down {
+            color: #c0453a;
+        }
+
         @media (max-width: 640px) {
             .team-tile {
-                grid-template-columns: 2.5rem 1fr;
+                grid-template-columns: 3rem 1fr;
                 grid-template-areas:
                     "position points"
                     "title title";
-                gap: 0.65rem 0.9rem;
+                gap: 0.9rem 1.1rem;
+                min-height: 7rem;
+                padding: 1.35rem 1.5rem;
             }
 
             .team-position {
@@ -95,9 +120,57 @@
             return Number.isFinite(parsed) ? parsed : 0;
         }
 
+        let dayColumns = [];
+        let summaryColumn = null;
+
+        async function fetchDayConfig() {
+            try {
+                const res = await fetch('/api/day-columns');
+                if (!res.ok) return { days: [], summaryColumn: null };
+                const data = await res.json();
+                return {
+                    days: Array.isArray(data.days) ? data.days : [],
+                    summaryColumn: data.summaryColumn ?? null
+                };
+            } catch (error) {
+                return { days: [], summaryColumn: null };
+            }
+        }
+
+        // Compares the current live points_summary value against the most
+        // recently recorded day column. Shows nothing until at least one
+        // day has been captured.
+        function getTrendArrow(row) {
+            let lastRecorded = null;
+            for (let i = dayColumns.length - 1; i >= 0; i--) {
+                const raw = row[dayColumns[i]];
+                if (raw === undefined || raw === null || String(raw).trim() === '') continue;
+                const parsed = Number(raw);
+                if (Number.isFinite(parsed)) {
+                    lastRecorded = parsed;
+                    break;
+                }
+            }
+
+            if (lastRecorded === null) return '';
+
+            const currentRaw = summaryColumn ? row[summaryColumn] : undefined;
+            const current = Number.isFinite(Number(currentRaw)) ? Number(currentRaw) : getPoints(row);
+
+            if (current > lastRecorded) return '<span class="trend-arrow trend-up">&#9650;</span>';
+            if (current < lastRecorded) return '<span class="trend-arrow trend-down">&#9660;</span>';
+            return '';
+        }
+
         async function fetchLeaderboard() {
-            const res = await fetch('/api/scores');
-            const data = await res.json();
+            const [scoresRes, config] = await Promise.all([
+                fetch('/api/scores'),
+                dayColumns.length ? Promise.resolve({ days: dayColumns, summaryColumn }) : fetchDayConfig()
+            ]);
+            dayColumns = config.days;
+            summaryColumn = config.summaryColumn;
+
+            const data = await scoresRes.json();
 
             data.sort((a, b) => getPoints(b) - getPoints(a));
 
@@ -107,6 +180,7 @@
             data.forEach((row, index) => {
                 const teamName = getTeamName(row);
                 const points = getPoints(row);
+                const trendArrow = getTrendArrow(row);
                 
                 // Assign class based on 0-indexed placement
                 let rankClass = "";
@@ -117,7 +191,7 @@
                     <div data-testid="stContainer" class="team-tile ${rankClass}">
                         <div class="team-position ${rankClass}">#${index + 1}</div>
                         <div class="team-title">${teamName}</div>
-                        <div class="team-points">${points}<span>Points</span></div>
+                        <div class="team-points">${points}<span>${trendArrow}Points</span></div>
                     </div>
                 `;
             });
