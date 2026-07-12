@@ -26,6 +26,8 @@ DAY_5 = os.environ.get("DAY_5")
 DAY_6 = os.environ.get("DAY_6")
 DAY_COLUMNS = [DAY_1, DAY_2, DAY_3, DAY_4, DAY_5, DAY_6]
 
+SNAPSHOT_REGISTRY = {f"day_{i}": False for i in range(len(DAY_COLUMNS))}
+
 CAMP_PIN = os.environ.get("CAMP_PIN")
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
@@ -85,17 +87,13 @@ async def day_columns(client = Depends(get_sheet_client)):
     and its human-readable index dynamically.
     """
     configured_days = [c for c in DAY_COLUMNS if c]
-    score_sheet = client.worksheet(SCORE_WORKSHEET)
-    header_row = score_sheet.row_values(1)
     
     # Find the first day column that has an empty cell or isn't fully locked
-    records = score_sheet.get_all_records()
     current_day_col = None
     current_day_idx = None
     
     for idx, col in enumerate(configured_days, start=1):
-        # The day is active if any team has a blank/empty value in it
-        if col not in header_row or any(str(rec.get(col, '')).strip() == '' for rec in records):
+        if not SNAPSHOT_REGISTRY.get(col, False):
             current_day_col = col
             current_day_idx = idx
             break
@@ -123,7 +121,7 @@ async def update_score(team: str = Form(...), change: int = Form(...), client = 
     configured_days = [c for c in DAY_COLUMNS if c]
     current_day_col = None
     for col in configured_days:
-        if col not in header_row or any(str(rec.get(col, '')).strip() == '' for rec in records):
+        if not SNAPSHOT_REGISTRY.get(col, False):
             current_day_col = col
             break
             
@@ -180,7 +178,7 @@ async def capture_snapshot(client = Depends(get_sheet_client)):
     # Find the first day column that's still empty for any team.
     target_day_col = None
     for col in configured_days:
-        if col not in header_row or any(str(rec.get(col, '')).strip() == '' for rec in records):
+        if not SNAPSHOT_REGISTRY.get(col, False):
             target_day_col = col
             break
 
@@ -226,6 +224,8 @@ async def capture_snapshot(client = Depends(get_sheet_client)):
 
     if updates:
         score_sheet.batch_update(updates)
+
+    SNAPSHOT_REGISTRY[target_day_col] = True
 
     return {
         "status": "success",
