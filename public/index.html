@@ -121,58 +121,64 @@
         }
 
         let dayColumns = [];
-        let summaryColumn = null;
 
-        async function fetchDayConfig() {
+        async function fetchDayColumns() {
             try {
                 const res = await fetch('/api/day-columns');
-                if (!res.ok) return { days: [], summaryColumn: null };
+                if (!res.ok) return [];
                 const data = await res.json();
-                return {
-                    days: Array.isArray(data.days) ? data.days : [],
-                    summaryColumn: data.summaryColumn ?? null
-                };
+                return Array.isArray(data.days) ? data.days : [];
             } catch (error) {
-                return { days: [], summaryColumn: null };
+                return [];
             }
         }
 
-        // Compares the current live points_summary value against the most
-        // recently recorded day column. Shows nothing until at least one
-        // day has been captured.
-        function getTrendArrow(row) {
-            let lastRecorded = null;
+        // Finds the most recent day column that every team has a value for,
+        // and returns a Map of teamName -> rank (1 = first place) on that day.
+        function computePastRanks(data) {
+            let chosenCol = null;
             for (let i = dayColumns.length - 1; i >= 0; i--) {
-                const raw = row[dayColumns[i]];
-                if (raw === undefined || raw === null || String(raw).trim() === '') continue;
-                const parsed = Number(raw);
-                if (Number.isFinite(parsed)) {
-                    lastRecorded = parsed;
+                const col = dayColumns[i];
+                const allFilled = data.every(row => {
+                    const raw = row[col];
+                    return raw !== undefined && raw !== null && String(raw).trim() !== '' && Number.isFinite(Number(raw));
+                });
+                if (allFilled) {
+                    chosenCol = col;
                     break;
                 }
             }
+            if (!chosenCol) return null;
 
-            if (lastRecorded === null) return '';
+            const ranked = [...data].sort((a, b) => Number(b[chosenCol]) - Number(a[chosenCol]));
+            const rankMap = new Map();
+            ranked.forEach((row, idx) => rankMap.set(getTeamName(row), idx + 1));
+            return rankMap;
+        }
 
-            const currentRaw = summaryColumn ? row[summaryColumn] : undefined;
-            const current = Number.isFinite(Number(currentRaw)) ? Number(currentRaw) : getPoints(row);
-
-            if (current > lastRecorded) return '<span class="trend-arrow trend-up">&#9650;</span>';
-            if (current < lastRecorded) return '<span class="trend-arrow trend-down">&#9660;</span>';
+        // Compares a team's current leaderboard position against their
+        // position on the last fully-recorded day. Shows nothing until a
+        // full day of snapshots exists.
+        function getTrendArrow(teamName, currentRank, pastRanks) {
+            if (!pastRanks || !pastRanks.has(teamName)) return '';
+            const pastRank = pastRanks.get(teamName);
+            if (currentRank < pastRank) return '<span class="trend-arrow trend-up">&#9650;</span>';
+            if (currentRank > pastRank) return '<span class="trend-arrow trend-down">&#9660;</span>';
             return '';
         }
 
         async function fetchLeaderboard() {
-            const [scoresRes, config] = await Promise.all([
+            const [scoresRes, days] = await Promise.all([
                 fetch('/api/scores'),
-                dayColumns.length ? Promise.resolve({ days: dayColumns, summaryColumn }) : fetchDayConfig()
+                dayColumns.length ? Promise.resolve(dayColumns) : fetchDayColumns()
             ]);
-            dayColumns = config.days;
-            summaryColumn = config.summaryColumn;
+            dayColumns = days;
 
             const data = await scoresRes.json();
 
             data.sort((a, b) => getPoints(b) - getPoints(a));
+
+            const pastRanks = computePastRanks(data);
 
             const container = document.getElementById('leaderboard-rows');
             container.innerHTML = '';
@@ -180,7 +186,7 @@
             data.forEach((row, index) => {
                 const teamName = getTeamName(row);
                 const points = getPoints(row);
-                const trendArrow = getTrendArrow(row);
+                const trendArrow = getTrendArrow(teamName, index + 1, pastRanks);
                 
                 // Assign class based on 0-indexed placement
                 let rankClass = "";
