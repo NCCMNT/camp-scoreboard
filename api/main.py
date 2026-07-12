@@ -190,6 +190,8 @@ async def capture_snapshot(client = Depends(get_sheet_client)):
     day_number = configured_days.index(target_day_col) + 1
     day_col_idx = ensure_column(target_day_col)
 
+    points_col_idx = ensure_column(POINTS_COLUMN)
+
     updates = []
     captured = []
     
@@ -209,6 +211,11 @@ async def capture_snapshot(client = Depends(get_sheet_client)):
         updates.append({
             "range": gspread.utils.rowcol_to_a1(i, day_col_idx),
             "values": [[day_points]]
+        })
+
+        updates.append({
+            "range": gspread.utils.rowcol_to_a1(i, points_col_idx),
+            "values": [[new_summary]]
         })
 
         captured.append({
