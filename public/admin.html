@@ -14,43 +14,62 @@
         .team-title {
             font-size: clamp(1.15rem, 2.5vw, 1.65rem);
             font-weight: 800;
-            text-align: center;
+            text-align: left;
             letter-spacing: -0.02em;
             line-height: 1.1;
             text-transform: uppercase;
         }
 
-        /* Mobile-first: this is the default (phone) layout. Wider screens
-           get a more spacious side-by-side arrangement below. */
         .control-tile {
+            position: relative;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
-            padding: 1.1rem 1.25rem;
+            gap: 1rem;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: linear-gradient(160deg, var(--bg-card), var(--bg-main));
         }
 
-        /* control-meta is the grid; points-row dissolves via display:contents
-           so overall-points/current-points become direct grid items
-           alongside change-control and the status line. */
+        /* Small emblem placeholder in the top right corner */
+        .team-emblem {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            background-color: var(--muted);
+            border-radius: 50%;
+            opacity: 0.25;
+            border: 2px dashed var(--text);
+        }
+
+        .team-header {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            padding-right: 3.5rem; /* Room for emblem */
+        }
+
         .control-meta {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            grid-template-areas:
-                ".       current"
-                "overall controls"
-                "status  status";
-            align-items: center;
-            gap: 0.5rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            width: 100%;
         }
 
+        /* Overall points on the left, Current points on the right, above the row */
         .points-row {
-            display: contents;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.5rem;
         }
 
-        /* Current points: top-right, directly above the buttons */
+        /* Current points: top-right position inside points-row */
         .current-points {
-            grid-area: current;
-            justify-self: end;
             font-size: clamp(1.35rem, 3vw, 1.9rem);
             font-weight: 900;
             color: var(--text);
@@ -68,10 +87,8 @@
             color: var(--muted);
         }
 
-        /* Overall points: bottom-left corner, sharing a row with the buttons */
+        /* Overall points: top-left position inside points-row */
         .overall-points {
-            grid-area: overall;
-            justify-self: start;
             font-size: clamp(1rem, 2.2vw, 1.3rem);
             font-weight: 700;
             color: var(--muted);
@@ -90,13 +107,14 @@
             opacity: 0.75;
         }
 
+        /* Buttons and inputs aligned perfectly in one single row */
         .change-control {
-            grid-area: controls;
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            flex-wrap: wrap;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
             gap: 0.6rem;
+            width: 100%;
         }
 
         .change-value {
@@ -111,6 +129,7 @@
             font-family: var(--font);
             font-size: 1.05rem;
             font-weight: 700;
+            flex-shrink: 0;
         }
 
         .change-value::-webkit-outer-spin-button,
@@ -129,6 +148,7 @@
             height: 3rem;
             font-size: 1.2rem;
             padding: 0;
+            flex-shrink: 0;
         }
 
         .apply-button {
@@ -136,11 +156,10 @@
             padding-inline: 1.25rem;
             font-size: 1rem;
             background-color: #be3300;
+            flex-grow: 1; /* Stretch to fill remaining space nicely */
         }
 
         .saving-status {
-            grid-area: status;
-            justify-self: end;
             min-height: 1rem;
             font-size: 0.72rem;
             font-weight: 700;
@@ -165,9 +184,6 @@
             margin-bottom: 1.25rem;
         }
 
-        /* --- Bottom actions: Snapshot + Logout, side by side. Any status or
-           result message for either action is shown inside that button
-           itself (short text), and the button disables while busy. --- */
         .bottom-actions {
             display: flex;
             flex-wrap: wrap;
@@ -209,26 +225,7 @@
             border: 1px solid var(--border);
         }
 
-        /* Wider screens: the more spacious 3-column arrangement */
-        @media (min-width: 640px) {
-            .control-tile {
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                gap: 1.25rem;
-                min-height: 5rem;
-                padding: 1rem 1.25rem;
-            }
-
-            .control-meta {
-                flex-shrink: 0;
-            }
-
-            .change-control {
-                flex-wrap: nowrap;
-            }
-        }
-        /* --- Themed confirmation modal (replaces window.confirm) --- */
+        /* --- Themed confirmation modal --- */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -314,7 +311,7 @@
         </div>
     </div>
 
-    <!-- Themed confirmation modal, used in place of window.confirm() -->
+    <!-- Themed confirmation modal -->
     <div id="confirm-modal" class="modal-overlay">
         <div class="modal-card" data-testid="stForm">
             <h3 id="confirm-modal-title">Are you sure?</h3>
@@ -366,9 +363,7 @@
 
         function getTodayPoints(row) {
             if (currentDayColumn) {
-                // Read from the active daily column tracking payload variable 
                 const val = row[currentDayColumn];
-                // Fallback to 0 if the cell value is an empty string
                 if (val === '' || val === undefined) return 0;
                 const parsed = Number(val);
                 if (Number.isFinite(parsed)) return parsed;
@@ -516,16 +511,21 @@
                 teamLookup[cleanKey] = teamName;
                 container.innerHTML += `
                     <div data-testid="stForm" class="control-tile">
-                        <div style="display: flex; flex-direction: column; width: 100%;">
-                            <div class="team-title" style="text-align: left; margin: 0;">${teamName}</div>
-                            <div style="color: var(--muted); font-size: 0.9rem; margin-top: 0.2rem; margin-bottom: 0.75rem; text-align: left;">${leaderName}</div>
+                        <!-- Small emblem placeholder in the top right corner -->
+                        <div class="team-emblem"></div>
+
+                        <div class="team-header">
+                            <div class="team-title">${teamName}</div>
+                            <div class="team-leader">${leaderName}</div>
                         </div>
 
                         <div class="control-meta">
+                            <!-- Overall points on the left, Current points on the right -->
                             <div class="points-row">
                                 <div class="overall-points" id="overall-${cleanKey}">${overallPoints}<span>Overall Points</span></div>
                                 <div class="current-points" id="pts-${cleanKey}">${todayPoints}<span>Points Today</span></div>
                             </div>
+                            <!-- All input fields and buttons aligned perfectly in one single row -->
                             <div class="change-control">
                                 <input type="number" id="input-${cleanKey}" class="change-value" value="0" step="1">
                                 <button type="button" id="minus-${cleanKey}" class="change-button minus-button" onclick="adjustChange('${cleanKey}', -1)">-</button>
@@ -544,11 +544,6 @@
             }
         }
 
-        // Lightweight periodic refresh: updates only the displayed point
-        // values and day indicator in place, so it never disturbs a
-        // counselor who's mid-way through typing a change into an input.
-        // Config is refetched every cycle (not cached) since another admin
-        // clicking Snapshot changes the active day server-side.
         async function refreshCounselorPoints() {
             try {
                 const [res, config] = await Promise.all([
@@ -571,12 +566,10 @@
                     if (overallEl) overallEl.innerHTML = `${getOverallPoints(row)}<span>Overall Points</span>`;
                 });
             } catch (error) {
-                // Silently skip this cycle - the next poll will retry.
+                // Silently skip cycle
             }
         }
 
-        // Themed replacement for window.confirm(). Resolves true/false
-        // depending on which button (or Escape/backdrop) the person used.
         function showConfirmModal(message, { title = 'Are you sure?', confirmLabel = 'Confirm' } = {}) {
             const overlay = document.getElementById('confirm-modal');
             const titleEl = document.getElementById('confirm-modal-title');
@@ -628,7 +621,7 @@
 
             button.disabled = true;
             button.textContent = 'Capturing…';
-            snapshotMessageUntil = Date.now() + 60000; // hold this message until we're done
+            snapshotMessageUntil = Date.now() + 60000;
 
             try {
                 const res = await fetch('/api/capture-snapshot', {
@@ -685,7 +678,6 @@
                 }
 
                 if (res.ok) {
-                    // Instantly update just the "today" value on screen with the new total.
                     document.getElementById(`pts-${cleanKey}`).innerHTML = `${data.new_score}<span>Points Today</span>`;
                     setChangeValue(cleanKey, 0);
                 } else {
