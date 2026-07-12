@@ -42,6 +42,31 @@
             gap: 0.6rem;
         }
 
+        .points-row {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+        }
+
+        .overall-points {
+            font-size: clamp(1rem, 2.2vw, 1.3rem);
+            font-weight: 700;
+            color: var(--muted);
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .overall-points span {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.08rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            opacity: 0.75;
+        }
+
         .current-points {
             font-size: clamp(1.35rem, 3vw, 1.9rem);
             font-weight: 900;
@@ -57,6 +82,28 @@
             font-weight: 700;
             letter-spacing: 0.08rem;
             text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .snapshot-button {
+            display: block;
+            width: 100%;
+            margin-top: 1.5rem;
+            background-color: var(--accent);
+        }
+
+        .snapshot-button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .snapshot-status {
+            min-height: 1.1rem;
+            margin-top: 0.6rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04rem;
+            text-align: center;
             color: var(--muted);
         }
 
@@ -179,7 +226,10 @@
         <!-- Authenticated Controls View Container -->
         <div id="controls-section" style="display: none;">
             <h2 style="text-align: center;">Control Panel</h2>
+            <p id="camp-day-indicator" style="color: var(--muted); text-align: center; margin-top: -0.75rem; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08rem;"></p>
             <div id="counselor-rows" class="controls-list"></div>
+            <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()" style="text-transform: uppercase;"></button>
+            <p id="snapshot-status" class="snapshot-status"></p>
             <button onclick="handleLogout()" class="logout-button">Logout</button>
         </div>
     </div>
@@ -199,6 +249,59 @@
             const value = row.Points ?? row.points_summed ?? row.points ?? 0;
             const parsed = Number(value);
             return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        let dayColumns = [];
+        let summaryColumn = null;
+        let currentDayColumn = null;
+        let currentDayIndex = null;
+
+        async function fetchConfig() {
+            try {
+                const res = await fetch('/api/day-columns', { credentials: 'same-origin' });
+                if (!res.ok) return { days: [], summaryColumn: null, currentDayColumn: null, currentDayIndex: null };
+                const data = await res.json();
+                return {
+                    days: Array.isArray(data.days) ? data.days : [],
+                    summaryColumn: data.summaryColumn ?? null,
+                    currentDayColumn: data.currentDayColumn ?? null,
+                    currentDayIndex: data.currentDayIndex ?? null
+                };
+            } catch (error) {
+                return { days: [], summaryColumn: null, currentDayColumn: null, currentDayIndex: null };
+            }
+        }
+
+        function getTodayPoints(row) {
+            if (currentDayColumn) {
+                // Read from the active daily column tracking payload variable 
+                const val = row[currentDayColumn];
+                // Fallback to 0 if the cell value is an empty string
+                if (val === '' || val === undefined) return 0;
+                const parsed = Number(val);
+                if (Number.isFinite(parsed)) return parsed;
+            }
+            return 0;
+        }
+
+        function getOverallPoints(row) {
+            if (summaryColumn) {
+                const parsed = Number(row[summaryColumn]);
+                if (Number.isFinite(parsed)) return parsed;
+            }
+            return 0;
+        }
+
+        function updateDayIndicator() {
+            const el = document.getElementById('camp-day-indicator');
+            const btn = document.getElementById('snapshot-button');
+            if (!el) return;
+            el.textContent = currentDayIndex && currentDayIndex <= dayColumns.length
+                ? `Day ${currentDayIndex} of ${dayColumns.length} in progress`
+                : `All ${dayColumns.length} camp days captured`;
+
+            if (!btn) return;
+            btn.textContent = `Snapshot points for day ${currentDayIndex}`
         }
 
         function getCleanKey(teamName) {
@@ -274,21 +377,33 @@
             window.location.reload();
         }
 
+        let refreshTimer = null;
+
         async function loadCounselorPanel() {
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('controls-section').style.display = 'block';
 
-            const res = await fetch('/api/scores', { credentials: 'same-origin' });
+            const [res, config] = await Promise.all([
+                fetch('/api/scores', { credentials: 'same-origin' }),
+                fetchConfig()
+            ]);
+            dayColumns = config.days;
+            summaryColumn = config.summaryColumn;
+            currentDayColumn = config.currentDayColumn;
+            currentDayIndex = config.currentDayIndex;
             const data = await res.json();
 
             data.sort((a, b) => getTeamName(a).localeCompare(getTeamName(b)));
+
+            updateDayIndicator();
 
             const container = document.getElementById('counselor-rows');
             container.innerHTML = '';
 
             data.forEach((row, index) => {
                 const teamName = getTeamName(row);
-                const points = getPoints(row);
+                const todayPoints = getTodayPoints(row);
+                const overallPoints = getOverallPoints(row);
                 const cleanKey = getCleanKey(teamName);
                 const leaderName = getLeader(row);
                 teamLookup[cleanKey] = teamName;
@@ -300,7 +415,10 @@
                         </div>
 
                         <div class="control-meta">
-                            <div class="current-points" id="pts-${cleanKey}">${points}<span>Current Points</span></div>
+                            <div class="points-row">
+                                <div class="overall-points" id="overall-${cleanKey}">${overallPoints}<span>Overall Points</span></div>
+                                <div class="current-points" id="pts-${cleanKey}">${todayPoints}<span>Points Today</span></div>
+                            </div>
                             <div class="change-control">
                                 <input type="number" id="input-${cleanKey}" class="change-value" value="0" step="1">
                                 <button type="button" id="minus-${cleanKey}" class="change-button minus-button" onclick="adjustChange('${cleanKey}', -1)">-</button>
@@ -313,6 +431,76 @@
                 `;
                 bindChangeInput(cleanKey);
             });
+
+            if (!refreshTimer) {
+                refreshTimer = setInterval(refreshCounselorPoints, 10000);
+            }
+        }
+
+        // Lightweight periodic refresh: updates only the displayed point
+        // values and day indicator in place, so it never disturbs a
+        // counselor who's mid-way through typing a change into an input.
+        // Config is refetched every cycle (not cached) since another admin
+        // clicking Snapshot changes the active day server-side.
+        async function refreshCounselorPoints() {
+            try {
+                const [res, config] = await Promise.all([
+                    fetch('/api/scores', { credentials: 'same-origin' }),
+                    fetchConfig()
+                ]);
+                dayColumns = config.days;
+                summaryColumn = config.summaryColumn;
+                currentDayColumn = config.currentDayColumn;
+                currentDayIndex = config.currentDayIndex;
+                const data = await res.json();
+
+                updateDayIndicator();
+
+                data.forEach(row => {
+                    const cleanKey = getCleanKey(getTeamName(row));
+                    const ptsEl = document.getElementById(`pts-${cleanKey}`);
+                    const overallEl = document.getElementById(`overall-${cleanKey}`);
+                    if (ptsEl) ptsEl.innerHTML = `${getTodayPoints(row)}<span>Points Today</span>`;
+                    if (overallEl) overallEl.innerHTML = `${getOverallPoints(row)}<span>Overall Points</span>`;
+                });
+            } catch (error) {
+                // Silently skip this cycle - the next poll will retry.
+            }
+        }
+
+        async function captureSnapshot() {
+            const button = document.getElementById('snapshot-button');
+            const status = document.getElementById('snapshot-status');
+
+            button.disabled = true;
+            status.textContent = 'Capturing today\'s points...';
+
+            try {
+                const res = await fetch('/api/capture-snapshot', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (error) {
+                    data = null;
+                }
+
+                if (res.ok) {
+                    status.textContent = data.next_day
+                        ? `Day ${data.day} captured - now on Day ${data.next_day}.`
+                        : `Day ${data.day} captured - all camp days complete.`;
+                    await loadCounselorPanel();
+                } else {
+                    status.textContent = data?.detail ?? 'Could not capture snapshot.';
+                }
+            } catch (error) {
+                status.textContent = 'Network error while capturing snapshot.';
+            } finally {
+                button.disabled = false;
+            }
         }
 
         async function submitScore(cleanKey) {
@@ -341,8 +529,8 @@
                 }
 
                 if (res.ok) {
-                    // Instantly update the single text string element on screen with the new value!
-                    document.getElementById(`pts-${cleanKey}`).innerHTML = `${data.new_score}<span>Current Points</span>`;
+                    // Instantly update just the "today" value on screen with the new total.
+                    document.getElementById(`pts-${cleanKey}`).innerHTML = `${data.new_score}<span>Points Today</span>`;
                     setChangeValue(cleanKey, 0);
                 } else {
                     alert(data?.detail ?? 'Session expired or error saving update.');
