@@ -228,6 +228,68 @@
                 flex-wrap: nowrap;
             }
         }
+        /* --- Themed confirmation modal (replaces window.confirm) --- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 8, 6, 0.72);
+            backdrop-filter: blur(2px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            z-index: 1000;
+        }
+
+        .modal-overlay.is-open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 380px;
+            background: linear-gradient(160deg, var(--bg-card), var(--bg-main));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-card h3 {
+            margin: 0 0 0.6rem;
+            font-family: var(--font);
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .modal-message {
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.45;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            height: 2.9rem;
+            font-size: 0.92rem;
+        }
+
+        .modal-cancel-button {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .modal-confirm-button {
+            background-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -248,6 +310,18 @@
             <div class="bottom-actions">
                 <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Logout</button>
                 <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Themed confirmation modal, used in place of window.confirm() -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-card" data-testid="stForm">
+            <h3 id="confirm-modal-title">Are you sure?</h3>
+            <p id="confirm-modal-message" class="modal-message"></p>
+            <div class="modal-actions">
+                <button type="button" id="confirm-modal-cancel" class="modal-cancel-button">Cancel</button>
+                <button type="button" id="confirm-modal-confirm" class="modal-confirm-button">Confirm</button>
             </div>
         </div>
     </div>
@@ -324,7 +398,7 @@
             if (!btn || Date.now() < snapshotMessageUntil) return;
 
             const dayIsActive = currentDayIndex && currentDayIndex <= dayColumns.length;
-            btn.textContent = dayIsActive ? `Snapshot Day ${currentDayIndex}` : 'All Days Captured';
+            btn.textContent = dayIsActive ? `Finish Day ${currentDayIndex}` : 'All Days Captured';
             btn.disabled = !dayIsActive;
         }
 
@@ -501,13 +575,54 @@
             }
         }
 
+        // Themed replacement for window.confirm(). Resolves true/false
+        // depending on which button (or Escape/backdrop) the person used.
+        function showConfirmModal(message, { title = 'Are you sure?', confirmLabel = 'Confirm' } = {}) {
+            const overlay = document.getElementById('confirm-modal');
+            const titleEl = document.getElementById('confirm-modal-title');
+            const messageEl = document.getElementById('confirm-modal-message');
+            const cancelBtn = document.getElementById('confirm-modal-cancel');
+            const confirmBtn = document.getElementById('confirm-modal-confirm');
+
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            confirmBtn.textContent = confirmLabel;
+            overlay.classList.add('is-open');
+            confirmBtn.focus();
+
+            return new Promise((resolve) => {
+                function cleanup(result) {
+                    overlay.classList.remove('is-open');
+                    cancelBtn.removeEventListener('click', onCancel);
+                    confirmBtn.removeEventListener('click', onConfirm);
+                    overlay.removeEventListener('click', onOverlayClick);
+                    document.removeEventListener('keydown', onKeydown);
+                    resolve(result);
+                }
+                function onCancel() { cleanup(false); }
+                function onConfirm() { cleanup(true); }
+                function onOverlayClick(event) {
+                    if (event.target === overlay) cleanup(false);
+                }
+                function onKeydown(event) {
+                    if (event.key === 'Escape') cleanup(false);
+                }
+
+                cancelBtn.addEventListener('click', onCancel);
+                confirmBtn.addEventListener('click', onConfirm);
+                overlay.addEventListener('click', onOverlayClick);
+                document.addEventListener('keydown', onKeydown);
+            });
+        }
+
         async function captureSnapshot() {
             const button = document.getElementById('snapshot-button');
 
-            const confirmed = window.confirm(
+            const confirmed = await showConfirmModal(
                 currentDayIndex
-                    ? `Snapshot Day ${currentDayIndex}? This locks in today's points and can't be undone.`
-                    : `Capture this snapshot? This can't be undone.`
+                    ? `Finish Day ${currentDayIndex}? This locks in today's points and can't be undone.`
+                    : `Capture this snapshot? This can't be undone.`,
+                { title: 'Snapshot camp day', confirmLabel: 'Snapshot' }
             );
             if (!confirmed) return;
 
@@ -529,7 +644,7 @@
                 }
 
                 if (res.ok) {
-                    button.textContent = data.next_day ? `Day ${data.day} captured ✓` : 'All Days Captured ✓';
+                    button.textContent = data.next_day ? `Day ${data.day} captured` : 'All Days Captured';
                     await loadCounselorPanel();
                 } else {
                     button.textContent = (data?.detail ?? 'Snapshot failed').slice(0, 42);
