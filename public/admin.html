@@ -11,63 +11,46 @@
             gap: 0.9rem;
         }
 
-        .control-tile {
-            display: grid;
-            grid-template-columns: minmax(3.5rem, auto) 1fr auto;
-            align-items: center;
-            gap: 1rem;
-            min-height: 5rem;
-            padding: 1rem 1.1rem;
-        }
-
-        .team-position {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: var(--accent);
-            text-align: left;
-            white-space: nowrap;
-        }
-
         .team-title {
             font-size: clamp(1.15rem, 2.5vw, 1.65rem);
             font-weight: 800;
             text-align: center;
             letter-spacing: -0.02em;
             line-height: 1.1;
+            text-transform: uppercase;
         }
 
+        /* Mobile-first: this is the default (phone) layout. Wider screens
+           get a more spacious side-by-side arrangement below. */
+        .control-tile {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1.1rem 1.25rem;
+        }
+
+        /* control-meta is the grid; points-row dissolves via display:contents
+           so overall-points/current-points become direct grid items
+           alongside change-control and the status line. */
         .control-meta {
             display: grid;
-            justify-items: end;
-            gap: 0.6rem;
+            grid-template-columns: 1fr auto;
+            grid-template-areas:
+                ".       current"
+                "overall controls"
+                "status  status";
+            align-items: center;
+            gap: 0.5rem 0.75rem;
         }
 
         .points-row {
-            display: flex;
-            align-items: baseline;
-            gap: 1rem;
+            display: contents;
         }
 
-        .overall-points {
-            font-size: clamp(1rem, 2.2vw, 1.3rem);
-            font-weight: 700;
-            color: var(--muted);
-            text-align: right;
-            white-space: nowrap;
-        }
-
-        .overall-points span {
-            display: block;
-            margin-top: 0.15rem;
-            font-size: 0.62rem;
-            font-weight: 700;
-            letter-spacing: 0.08rem;
-            text-transform: uppercase;
-            color: var(--muted);
-            opacity: 0.75;
-        }
-
+        /* Current points: top-right, directly above the buttons */
         .current-points {
+            grid-area: current;
+            justify-self: end;
             font-size: clamp(1.35rem, 3vw, 1.9rem);
             font-weight: 900;
             color: var(--text);
@@ -85,45 +68,48 @@
             color: var(--muted);
         }
 
-        .snapshot-button {
-            display: block;
-            width: 100%;
-            margin-top: 1.5rem;
-            background-color: var(--accent);
-        }
-
-        .snapshot-button:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        .snapshot-status {
-            min-height: 1.1rem;
-            margin-top: 0.6rem;
-            font-size: 0.78rem;
+        /* Overall points: bottom-left corner, sharing a row with the buttons */
+        .overall-points {
+            grid-area: overall;
+            justify-self: start;
+            font-size: clamp(1rem, 2.2vw, 1.3rem);
             font-weight: 700;
-            letter-spacing: 0.04rem;
-            text-align: center;
             color: var(--muted);
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .overall-points span {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.08rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            opacity: 0.75;
         }
 
         .change-control {
+            grid-area: controls;
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            flex-wrap: nowrap;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 0.6rem;
         }
 
         .change-value {
-            width: 4.25rem;
+            width: 4.5rem;
+            height: 3rem;
             text-align: center;
             background-color: var(--bg-main);
             border: 1px solid var(--border);
             color: var(--text);
             border-radius: 8px;
-            padding: 0.55rem 0.35rem;
+            padding: 0.5rem;
             font-family: var(--font);
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 700;
         }
 
@@ -139,16 +125,22 @@
         }
 
         .change-button {
-            width: 2.5rem;
-            padding: 0.55rem 0;
+            width: 3rem;
+            height: 3rem;
+            font-size: 1.2rem;
+            padding: 0;
         }
 
         .apply-button {
-            padding-inline: 1rem;
+            height: 3rem;
+            padding-inline: 1.25rem;
+            font-size: 1rem;
             background-color: #be3300;
         }
 
         .saving-status {
+            grid-area: status;
+            justify-self: end;
             min-height: 1rem;
             font-size: 0.72rem;
             font-weight: 700;
@@ -173,42 +165,67 @@
             margin-bottom: 1.25rem;
         }
 
-        .logout-button {
-            display: block;
-            width: 100%;
+        /* --- Bottom actions: Snapshot + Logout, side by side. Any status or
+           result message for either action is shown inside that button
+           itself (short text), and the button disables while busy. --- */
+        .bottom-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
             margin-top: 1.75rem;
+        }
+
+        .bottom-actions button {
+            height: 3.1rem;
+            padding-inline: 0.75rem;
+            font-size: 0.88rem;
+            line-height: 1.2;
+            white-space: normal;
+        }
+
+        .bottom-actions .logout-button {
+            flex: 1 1 0;
+            min-width: 90px;
+        }
+
+        .bottom-actions .snapshot-button {
+            flex: 3 1 0;
+            min-width: 180px;
+        }
+
+        .snapshot-button {
+            background-color: var(--accent);
+        }
+
+        .snapshot-button:disabled,
+        .logout-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .logout-button {
             background: transparent;
             color: var(--text);
             border: 1px solid var(--border);
         }
 
-        @media (max-width: 640px) {
+        /* Wider screens: the more spacious 3-column arrangement */
+        @media (min-width: 640px) {
             .control-tile {
-                grid-template-columns: 2.5rem 1fr;
-                grid-template-areas:
-                    "position meta"
-                    "title title"
-                    "controls controls";
-                gap: 0.65rem 0.9rem;
-            }
-
-            .team-position {
-                grid-area: position;
-            }
-
-            .team-title {
-                grid-area: title;
-                text-align: left;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1.25rem;
+                min-height: 5rem;
+                padding: 1rem 1.25rem;
             }
 
             .control-meta {
-                grid-area: meta;
+                flex-shrink: 0;
             }
 
             .change-control {
-                grid-area: controls;
-                justify-content: flex-start;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
             }
         }
     </style>
@@ -228,9 +245,10 @@
             <h2 style="text-align: center;">Control Panel</h2>
             <p id="camp-day-indicator" style="color: var(--muted); text-align: center; margin-top: -0.75rem; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08rem;"></p>
             <div id="counselor-rows" class="controls-list"></div>
-            <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()" style="text-transform: uppercase;"></button>
-            <p id="snapshot-status" class="snapshot-status"></p>
-            <button onclick="handleLogout()" class="logout-button">Logout</button>
+            <div class="bottom-actions">
+                <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Logout</button>
+                <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
+            </div>
         </div>
     </div>
 
@@ -292,16 +310,22 @@
             return 0;
         }
 
+        let snapshotMessageUntil = 0;
+
         function updateDayIndicator() {
             const el = document.getElementById('camp-day-indicator');
-            const btn = document.getElementById('snapshot-button');
-            if (!el) return;
-            el.textContent = currentDayIndex && currentDayIndex <= dayColumns.length
-                ? `Day ${currentDayIndex} of ${dayColumns.length} in progress`
-                : `All ${dayColumns.length} camp days captured`;
+            if (el) {
+                el.textContent = currentDayIndex && currentDayIndex <= dayColumns.length
+                    ? `Day ${currentDayIndex} of ${dayColumns.length} in progress`
+                    : `All ${dayColumns.length} camp days captured`;
+            }
 
-            if (!btn) return;
-            btn.textContent = `Snapshot points for day ${currentDayIndex}`
+            const btn = document.getElementById('snapshot-button');
+            if (!btn || Date.now() < snapshotMessageUntil) return;
+
+            const dayIsActive = currentDayIndex && currentDayIndex <= dayColumns.length;
+            btn.textContent = dayIsActive ? `Snapshot Day ${currentDayIndex}` : 'All Days Captured';
+            btn.disabled = !dayIsActive;
         }
 
         function getCleanKey(teamName) {
@@ -373,8 +397,17 @@
         }
 
         async function handleLogout() {
-            await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
-            window.location.reload();
+            const button = document.getElementById('logout-button');
+            button.disabled = true;
+            button.textContent = 'Logging out…';
+
+            try {
+                await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+                window.location.reload();
+            } catch (error) {
+                button.textContent = 'Logout failed — retry';
+                button.disabled = false;
+            }
         }
 
         let refreshTimer = null;
@@ -470,10 +503,17 @@
 
         async function captureSnapshot() {
             const button = document.getElementById('snapshot-button');
-            const status = document.getElementById('snapshot-status');
+
+            const confirmed = window.confirm(
+                currentDayIndex
+                    ? `Snapshot Day ${currentDayIndex}? This locks in today's points and can't be undone.`
+                    : `Capture this snapshot? This can't be undone.`
+            );
+            if (!confirmed) return;
 
             button.disabled = true;
-            status.textContent = 'Capturing today\'s points...';
+            button.textContent = 'Capturing…';
+            snapshotMessageUntil = Date.now() + 60000; // hold this message until we're done
 
             try {
                 const res = await fetch('/api/capture-snapshot', {
@@ -489,17 +529,18 @@
                 }
 
                 if (res.ok) {
-                    status.textContent = data.next_day
-                        ? `Day ${data.day} captured - now on Day ${data.next_day}.`
-                        : `Day ${data.day} captured - all camp days complete.`;
+                    button.textContent = data.next_day ? `Day ${data.day} captured ✓` : 'All Days Captured ✓';
                     await loadCounselorPanel();
                 } else {
-                    status.textContent = data?.detail ?? 'Could not capture snapshot.';
+                    button.textContent = (data?.detail ?? 'Snapshot failed').slice(0, 42);
+                    button.disabled = false;
                 }
             } catch (error) {
-                status.textContent = 'Network error while capturing snapshot.';
-            } finally {
+                button.textContent = 'Network error — retry';
                 button.disabled = false;
+            } finally {
+                snapshotMessageUntil = Date.now() + 3000;
+                setTimeout(updateDayIndicator, 3000);
             }
         }
 
