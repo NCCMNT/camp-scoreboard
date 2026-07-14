@@ -312,12 +312,8 @@ async def get_all_days():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/reopen-day", dependencies=[Depends(verify_session)])
-async def reopen_day(payload: dict):
-    """
-    Reopens a specified historical day column, rendering it open to changes.
-    Relocks all subsequent days after it.
-    """
-    target_day = payload.get("day")
+async def reopen_day(day: str = Form(...)):
+    target_day = day
     configured_days = [c for c in DAY_COLUMNS if c]
     
     if not target_day or target_day not in configured_days:
@@ -326,9 +322,6 @@ async def reopen_day(payload: dict):
     try:
         target_idx = configured_days.index(target_day)
         
-        # Chronologically update the snapshot registry:
-        # 1. Target day and all days before it become UNLOCKED (False)
-        # 2. All days succeeding the target day become LOCKED (True)
         for idx, col in enumerate(configured_days):
             if idx >= target_idx:
                 SNAPSHOT_REGISTRY[col] = False

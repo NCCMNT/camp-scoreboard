@@ -865,24 +865,20 @@
             const target = document.getElementById('day-select-dropdown').value;
             if (!target) return;
 
-            const confirmed = await showConfirmModal(
-                `Reopening "${target}" will allow you to make changes to its scores. This will relock any subsequent days after it. Do you want to continue?`,
-                { title: 'Confirm Reopen Day', confirmLabel: 'Yes, Reopen' }
-            );
-            if (!confirmed) return;
+            const formData = new FormData();
+            formData.append('day', target);
 
             try {
                 const res = await fetch('/api/reopen-day', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ day: target }),
+                    body: formData,
                     credentials: 'same-origin'
                 });
 
                 const result = await res.json();
                 if (res.ok) {
                     closeReopenModal();
-                    alert(result.message);
+                    alert(result.message || `Successfully reopened "${target}"`);
                     window.location.reload();
                 } else {
                     alert("Error: " + (result.detail || "Unable to reopen day."));
