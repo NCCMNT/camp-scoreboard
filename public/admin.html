@@ -31,24 +31,52 @@
             background: linear-gradient(160deg, var(--bg-card), var(--bg-main));
         }
 
-        /* Small emblem placeholder in the top right corner */
         .team-emblem {
             position: absolute;
             top: 1.25rem;
             right: 1.25rem;
-            width: 2.5rem;
-            height: 2.5rem;
+            width: 3rem;
+            height: 3rem;
             background-color: var(--muted);
-            border-radius: 50%;
-            opacity: 0.25;
-            border: 2px dashed var(--text);
+            border-radius: 1rem;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            opacity: 0.8;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .team-emblem:hover {
+            transform: scale(1.05);
         }
 
         .team-header {
             display: flex;
             flex-direction: column;
             width: 100%;
-            padding-right: 3.5rem; /* Room for emblem */
+            padding-right: 6rem;
+        }
+
+        .team-emblem:has(img:not([style*="display: none"]):not([style*="display:none"])) .emblem-fallback {
+            display: none;
+        }
+
+        .team-emblem img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            inset: 0;
+        }
+
+        .team-emblem .emblem-fallback {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--text);
         }
 
         .control-meta {
@@ -58,7 +86,6 @@
             width: 100%;
         }
 
-        /* Overall points on the left, Current points on the right, above the row */
         .points-row {
             display: flex;
             justify-content: space-between;
@@ -68,7 +95,6 @@
             padding-bottom: 0.5rem;
         }
 
-        /* Current points: top-right position inside points-row */
         .current-points {
             font-size: clamp(1.35rem, 3vw, 1.9rem);
             font-weight: 900;
@@ -87,7 +113,6 @@
             color: var(--muted);
         }
 
-        /* Overall points: top-left position inside points-row */
         .overall-points {
             font-size: clamp(1rem, 2.2vw, 1.3rem);
             font-weight: 700;
@@ -107,7 +132,6 @@
             opacity: 0.75;
         }
 
-        /* Buttons and inputs aligned perfectly in one single row */
         .change-control {
             display: flex;
             align-items: center;
@@ -156,7 +180,7 @@
             padding-inline: 1.25rem;
             font-size: 1rem;
             background-color: #be3300;
-            flex-grow: 1; /* Stretch to fill remaining space nicely */
+            flex-grow: 1;
         }
 
         .saving-status {
@@ -323,8 +347,11 @@
         </div>
     </div>
 
+    <input type="file" id="emblem-file-input" accept="image/*" style="display: none;">
+
     <script>
         const teamLookup = {};
+        let activeUploadKey = null;
 
         function getTeamName(row) {
             return row.Team ?? row.team_name ?? row.team ?? 'Unknown Team';
@@ -441,6 +468,60 @@
             setChangeValue(cleanKey, getChangeValue(cleanKey) + delta);
         }
 
+        function triggerUpload(cleanKey) {
+            activeUploadKey = cleanKey;
+            document.getElementById('emblem-file-input').click();
+        }
+
+        // Setup the image crop-and-upload flow
+        document.getElementById('emblem-file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file || !activeUploadKey) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const size = Math.min(img.width, img.height);
+                    canvas.width = size;
+                    canvas.height = size;
+                    
+                    const ctx = canvas.getContext('2d');
+                    const xOffset = (img.width - size) / 2;
+                    const yOffset = (img.height - size) / 2;
+                    ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, size, size);
+                    
+                    canvas.toBlob(async (blob) => {
+                        const formData = new FormData();
+                        formData.append('emblem', blob, `${activeUploadKey}.png`);
+                        formData.append('team_key', activeUploadKey);
+
+                        try {
+                            const res = await fetch('/api/upload-emblem', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            if (res.ok) {
+                                const imgElement = document.querySelector(`#tile-${activeUploadKey} .team-emblem img`);
+                                if (imgElement) {
+                                    imgElement.src = `emblems/${activeUploadKey}.png?t=${Date.now()}`;
+                                    imgElement.style.display = 'block'; 
+                                }
+                            } else {
+                                alert('Failed to save emblem.');
+                            }
+                        } catch (err) {
+                            alert('Network error while saving emblem.');
+                        }
+                    }, 'image/png');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        });
+
         async function checkAuth() {
             const res = await fetch('/api/auth', { credentials: 'same-origin' });
             if (res.ok) {
@@ -510,22 +591,23 @@
                 const leaderName = getLeader(row);
                 teamLookup[cleanKey] = teamName;
                 container.innerHTML += `
-                    <div data-testid="stForm" class="control-tile">
-                        <!-- Small emblem placeholder in the top right corner -->
-                        <div class="team-emblem"></div>
+                    <div data-testid="stForm" class="control-tile" id="tile-${cleanKey}">
+                        <!-- Clickable emblem configured in top right corner -->
+                        <div class="team-emblem" onclick="triggerUpload('${cleanKey}')" title="Click to upload team emblem">
+                            <img src="emblems/${cleanKey}.png?t=${Date.now()}" alt="" onerror="this.style.display='none'">
+                            <span class="emblem-fallback">${teamName.charAt(0).toUpperCase()}</span>
+                        </div>
 
                         <div class="team-header">
                             <div class="team-title">${teamName}</div>
-                            <div class="team-leader">${leaderName}</div>
+                            <div style="color: var(--muted); font-size: 0.9rem; margin-top: 0.2rem; text-align: left;">${leaderName}</div>
                         </div>
 
                         <div class="control-meta">
-                            <!-- Overall points on the left, Current points on the right -->
                             <div class="points-row">
                                 <div class="overall-points" id="overall-${cleanKey}">${overallPoints}<span>Overall Points</span></div>
                                 <div class="current-points" id="pts-${cleanKey}">${todayPoints}<span>Points Today</span></div>
                             </div>
-                            <!-- All input fields and buttons aligned perfectly in one single row -->
                             <div class="change-control">
                                 <input type="number" id="input-${cleanKey}" class="change-value" value="0" step="1">
                                 <button type="button" id="minus-${cleanKey}" class="change-button minus-button" onclick="adjustChange('${cleanKey}', -1)">-</button>
@@ -566,7 +648,7 @@
                     if (overallEl) overallEl.innerHTML = `${getOverallPoints(row)}<span>Overall Points</span>`;
                 });
             } catch (error) {
-                // Silently skip cycle
+                // Ignore silent update errors
             }
         }
 

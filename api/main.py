@@ -1,7 +1,9 @@
 import os
 import json
 from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, Response, Request, Form
+from fastapi import FastAPI, Depends, HTTPException, Response, Request, Form, UploadFile, File
+import colorgram
+import shutil
 from fastapi.staticfiles import StaticFiles
 import gspread
 from dotenv import load_dotenv
@@ -31,6 +33,9 @@ SNAPSHOT_REGISTRY = {f"day_{i}": False for i in range(len(DAY_COLUMNS))}
 CAMP_PIN = os.environ.get("CAMP_PIN")
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
+UPLOAD_DIR = "public/emblems"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 # Initialize Google Sheets connection securely via service account
 def get_sheet_client() -> gspread.Spreadsheet:
     secret_json_str = os.environ.get("G_SERVICE_ACCOUNT_JSON")
@@ -48,6 +53,43 @@ def verify_session(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Unauthorized access")
 
 # --- ENDPOINTS ---
+
+@app.post("/api/upload-emblem")
+async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...)):
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    file_location = f"{UPLOAD_DIR}/{team_key}.png"
+    
+    try:
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(emblem.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    
+    # Extract colors
+    try:
+        import colorgram
+        colors = colorgram.extract(file_location, 2)
+        hex_colors = []
+        for color in colors:
+            rgb = color.rgb
+            hex_code = '#{:02x}{:02x}{:02x}'.format(rgb.r, rgb.g, rgb.b)
+            hex_colors.append(hex_code)
+    except Exception:
+        # Fallback if colorgram fails or isn't installed
+        hex_colors = ["#FFFFFF", "#000000"]
+    
+    primary_color = hex_colors[0] if len(hex_colors) > 0 else "#FFFFFF"
+    secondary_color = hex_colors[1] if len(hex_colors) > 1 else "#000000"
+    
+    # TODO: Update your google sheet/DB with these colors if you want theme updates!
+    
+    return {
+        "status": "success",
+        "emblem_url": f"/uploads/{team_key}.png",
+        "primary_color": primary_color,
+        "secondary_color": secondary_color
+    }
 
 @app.post("/api/login")
 async def login(response: Response, pin: str = Form(...)):
@@ -234,5 +276,5 @@ async def capture_snapshot(client = Depends(get_sheet_client)):
         "column": target_day_col,
         "captured": captured
     }
-
+app.mount("/emblems", StaticFiles(directory="public/emblems"), name="emblems")
 app.mount("/", StaticFiles(directory="public", html=True), name="static")
