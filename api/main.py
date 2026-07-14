@@ -276,5 +276,71 @@ async def capture_snapshot(client = Depends(get_sheet_client)):
         "column": target_day_col,
         "captured": captured
     }
+
+@app.get("/api/all-days", dependencies=[Depends(verify_session)])
+async def get_all_days():
+    """
+    Exposes configured days that have been registered in the registry, 
+    up to the current active (unlocked) day, excluding future locked days.
+    """
+    try:
+        configured_days = [c for c in DAY_COLUMNS if c]
+        
+        # Find the first unlocked/active day index
+        current_active_day = None
+        for col in configured_days:
+            if not SNAPSHOT_REGISTRY.get(col, False):
+                current_active_day = col
+                break
+                
+        # If all days are captured, the active day defaults to the last day
+        if not current_active_day and configured_days:
+            current_active_day = configured_days[-1]
+            
+        # Determine selectable range: everything up to current active day index
+        current_idx = configured_days.index(current_active_day) if current_active_day in configured_days else len(configured_days)
+        selectable_days = configured_days[:current_idx + 1]
+
+        selectable_days = [d.capitalize().replace('_', ' ') for d in selectable_days]
+        current_active_day = current_active_day.capitalize().replace('_', ' ')
+        
+        return {
+            "days": selectable_days,
+            "active_day": current_active_day
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/reopen-day", dependencies=[Depends(verify_session)])
+async def reopen_day(payload: dict):
+    """
+    Reopens a specified historical day column, rendering it open to changes.
+    Relocks all subsequent days after it.
+    """
+    target_day = payload.get("day")
+    configured_days = [c for c in DAY_COLUMNS if c]
+    
+    if not target_day or target_day not in configured_days:
+        raise HTTPException(status_code=400, detail="Invalid or unspecified day column.")
+        
+    try:
+        target_idx = configured_days.index(target_day)
+        
+        # Chronologically update the snapshot registry:
+        # 1. Target day and all days before it become UNLOCKED (False)
+        # 2. All days succeeding the target day become LOCKED (True)
+        for idx, col in enumerate(configured_days):
+            if idx >= target_idx:
+                SNAPSHOT_REGISTRY[col] = False
+            else:
+                SNAPSHOT_REGISTRY[col] = True
+                
+        return {
+            "success": True, 
+            "message": f"Successfully checked out {target_day}! All inputs are open for modifications."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 app.mount("/emblems", StaticFiles(directory="public/emblems"), name="emblems")
 app.mount("/", StaticFiles(directory="public", html=True), name="static")

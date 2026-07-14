@@ -6,7 +6,7 @@
     <title>Funtime Control Panel</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .controls-list {
+.controls-list {
             display: grid;
             gap: 0.9rem;
         }
@@ -51,7 +51,7 @@
         }
 
         .team-emblem:hover {
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
 
         .team-header {
@@ -181,6 +181,16 @@
             font-size: 1rem;
             background-color: #be3300;
             flex-grow: 1;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+
+        .apply-button:hover:not(:disabled) {
+            filter: brightness(1.08);
+        }
+
+        .apply-button:active:not(:disabled) {
+            filter: brightness(0.92);
         }
 
         .saving-status {
@@ -200,7 +210,7 @@
 
         .apply-button:disabled,
         .change-button:disabled {
-            opacity: 0.55;
+            opacity: 0.45;
             cursor: not-allowed;
         }
 
@@ -210,9 +220,9 @@
 
         .bottom-actions {
             display: flex;
-            flex-wrap: wrap;
             gap: 0.75rem;
             margin-top: 1.75rem;
+            width: 100%;
         }
 
         .bottom-actions button {
@@ -221,35 +231,63 @@
             font-size: 0.88rem;
             line-height: 1.2;
             white-space: normal;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s, filter 0.15s, transform 0.1s;
         }
 
         .bottom-actions .logout-button {
-            flex: 1 1 0;
-            min-width: 90px;
-        }
-
-        .bottom-actions .snapshot-button {
-            flex: 3 1 0;
-            min-width: 180px;
-        }
-
-        .snapshot-button {
-            background-color: var(--accent);
-        }
-
-        .snapshot-button:disabled,
-        .logout-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .logout-button {
+            flex: 0 0 20%;
             background: transparent;
             color: var(--text);
             border: 1px solid var(--border);
         }
 
-        /* --- Themed confirmation modal --- */
+        .bottom-actions .logout-button:hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .bottom-actions .logout-button:active:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.08);
+            transform: scale(0.98);
+        }
+
+        .bottom-actions .reopen-trigger-button {
+            flex: 0 0 calc(40% - 0.375rem);
+            background-color: #b65624;
+            color: #ffffff;
+            border: none;
+        }
+
+        .bottom-actions .snapshot-button {
+            flex: 0 0 calc(40% - 0.375rem);
+            background-color: #b65624;
+            color: #ffffff;
+            border: none;
+        }
+
+        .bottom-actions .reopen-trigger-button:hover:not(:disabled),
+        .bottom-actions .snapshot-button:hover:not(:disabled) {
+            filter: brightness(1.08);
+            box-shadow: none;
+        }
+
+        .bottom-actions .reopen-trigger-button:active:not(:disabled),
+        .bottom-actions .snapshot-button:active:not(:disabled) {
+            filter: brightness(0.92);
+            transform: scale(0.98);
+        }
+
+        .bottom-actions button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -300,6 +338,9 @@
             flex: 1;
             height: 2.9rem;
             font-size: 0.92rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: filter 0.15s, transform 0.1s;
         }
 
         .modal-cancel-button {
@@ -308,9 +349,47 @@
             border: 1px solid var(--border);
         }
 
-        .modal-confirm-button {
-            background-color: var(--accent);
+        .modal-cancel-button:hover {
+            background-color: rgba(255, 255, 255, 0.04);
         }
+
+        .modal-cancel-button:active {
+            transform: scale(0.98);
+        }
+
+        .modal-confirm-button {
+            background-color: #b65624;
+            color: #ffffff;
+            border: none;
+        }
+
+        .modal-confirm-button:hover {
+            filter: brightness(1.08);
+        }
+
+        .modal-confirm-button:active {
+            filter: brightness(0.92);
+            transform: scale(0.98);
+        }
+
+        .modal-select-dropdown {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-main);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: var(--font);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            outline: none;
+        }
+
+        .modal-select-dropdown:focus {
+            border-color: #b65624;
+        }
+
     </style>
 </head>
 <body>
@@ -330,6 +409,7 @@
             <div id="counselor-rows" class="controls-list"></div>
             <div class="bottom-actions">
                 <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Logout</button>
+                <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Reopen day</button>
                 <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
             </div>
         </div>
@@ -343,6 +423,23 @@
             <div class="modal-actions">
                 <button type="button" id="confirm-modal-cancel" class="modal-cancel-button">Cancel</button>
                 <button type="button" id="confirm-modal-confirm" class="modal-confirm-button">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Themed Reopen Day Selection Modal -->
+    <div id="reopen-modal" class="modal-overlay">
+        <div class="modal-card" data-testid="stForm">
+            <h3>Reopen Past Day</h3>
+            <p class="modal-message">Select an active or previously completed day column to reopen for changes. Note: Reopening a past day will relock subsequent days.</p>
+            
+            <select id="day-select-dropdown" class="modal-select-dropdown">
+                <!-- Dynamically loaded -->
+            </select>
+
+            <div class="modal-actions">
+                <button type="button" class="modal-cancel-button" onclick="closeReopenModal()">Cancel</button>
+                <button type="button" class="modal-confirm-button" onclick="submitReopenDay()">Reopen</button>
             </div>
         </div>
     </div>
@@ -695,7 +792,7 @@
 
             const confirmed = await showConfirmModal(
                 currentDayIndex
-                    ? `Finish Day ${currentDayIndex}? This locks in today's points and can't be undone.`
+                    ? `Finish day ${currentDayIndex}? This locks in today's points and can't be undone.`
                     : `Capture this snapshot? This can't be undone.`,
                 { title: 'Snapshot camp day', confirmLabel: 'Snapshot' }
             );
@@ -731,6 +828,67 @@
             } finally {
                 snapshotMessageUntil = Date.now() + 3000;
                 setTimeout(updateDayIndicator, 3000);
+            }
+        }
+
+        async function openReopenModal() {
+            try {
+                const res = await fetch('/api/all-days', { credentials: 'same-origin' });
+                if (!res.ok) throw new Error("Failed fetching days registry index.");
+                
+                const data = await res.json();
+                const dropdown = document.getElementById('day-select-dropdown');
+                dropdown.innerHTML = '';
+
+                if (data.days && data.days.length > 0) {
+                    data.days.forEach(day => {
+                        const option = document.createElement('option');
+                        option.value = day;
+                        option.textContent = day === data.active_day ? `${day} (Active)` : day;
+                        if (day === data.active_day) option.selected = true;
+                        dropdown.appendChild(option);
+                    });
+                    document.getElementById('reopen-modal').classList.add('is-open');
+                } else {
+                    alert("No day columns are available to select.");
+                }
+            } catch (err) {
+                alert("Error loading dynamic columns registry.");
+            }
+        }
+
+        function closeReopenModal() {
+            document.getElementById('reopen-modal').classList.remove('is-open');
+        }
+
+        async function submitReopenDay() {
+            const target = document.getElementById('day-select-dropdown').value;
+            if (!target) return;
+
+            const confirmed = await showConfirmModal(
+                `Reopening "${target}" will allow you to make changes to its scores. This will relock any subsequent days after it. Do you want to continue?`,
+                { title: 'Confirm Reopen Day', confirmLabel: 'Yes, Reopen' }
+            );
+            if (!confirmed) return;
+
+            try {
+                const res = await fetch('/api/reopen-day', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ day: target }),
+                    credentials: 'same-origin'
+                });
+
+                const result = await res.json();
+                if (res.ok) {
+                    closeReopenModal();
+                    alert(result.message);
+                    window.location.reload();
+                } else {
+                    alert("Error: " + (result.detail || "Unable to reopen day."));
+                }
+            } catch (err) {
+                alert("Failed to process day reopen request.");
             }
         }
 
