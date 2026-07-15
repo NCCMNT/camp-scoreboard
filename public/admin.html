@@ -219,16 +219,19 @@
         }
 
         .bottom-actions {
-            display: flex;
-            gap: 0.75rem;
+            display: grid;
+            grid-template-columns: 1fr 1.6fr 1.6fr;
+            gap: 0.6rem;
             margin-top: 1.75rem;
             width: 100%;
         }
 
         .bottom-actions button {
+            width: 100%;
+            min-width: 0;
             height: 3.1rem;
-            padding-inline: 0.75rem;
-            font-size: 0.88rem;
+            padding-inline: 0.5rem;
+            font-size: 0.85rem;
             line-height: 1.2;
             white-space: normal;
             border-radius: 8px;
@@ -238,7 +241,6 @@
         }
 
         .bottom-actions .logout-button {
-            flex: 0 0 20%;
             background: transparent;
             color: var(--text);
             border: 1px solid var(--border);
@@ -255,14 +257,12 @@
         }
 
         .bottom-actions .reopen-trigger-button {
-            flex: 0 0 calc(40% - 0.375rem);
             background-color: #b65624;
             color: #ffffff;
             border: none;
         }
 
         .bottom-actions .snapshot-button {
-            flex: 0 0 calc(40% - 0.375rem);
             background-color: #b65624;
             color: #ffffff;
             border: none;
@@ -405,11 +405,16 @@
         <!-- Authenticated Controls View Container -->
         <div id="controls-section" style="display: none;">
             <h2 style="text-align: center;">Control Panel</h2>
-            <p id="camp-day-indicator" style="color: var(--muted); text-align: center; margin-top: -0.75rem; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08rem;"></p>
+            <p id="camp-day-indicator" style="color: var(--muted); text-align: center; margin-top: -0.75rem; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08rem;"></p>
+            <div id="editing-day-banner" style="display: none; text-align: center; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06rem; color: #b65624;">
+                <span id="editing-day-label"></span>
+                &nbsp;·&nbsp;
+                <a href="#" onclick="exitEditingDay(); return false;" style="color: inherit; text-decoration: underline;">Back to today</a>
+            </div>
             <div id="counselor-rows" class="controls-list"></div>
             <div class="bottom-actions">
                 <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Logout</button>
-                <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Reopen day</button>
+                <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
                 <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
             </div>
         </div>
@@ -427,11 +432,11 @@
         </div>
     </div>
 
-    <!-- Themed Reopen Day Selection Modal -->
+    <!-- Themed Day Picker Modal (view/edit a past day without changing the active day) -->
     <div id="reopen-modal" class="modal-overlay">
         <div class="modal-card" data-testid="stForm">
-            <h3>Reopen Past Day</h3>
-            <p class="modal-message">Select an active or previously completed day column to reopen for changes. Note: Reopening a past day will relock subsequent days.</p>
+            <h3>Edit a Day</h3>
+            <p class="modal-message">Pick a day to add or fix points for. Today's active day stays the same for everyone else no matter what you pick here.</p>
             
             <select id="day-select-dropdown" class="modal-select-dropdown">
                 <!-- Dynamically loaded -->
@@ -439,7 +444,7 @@
 
             <div class="modal-actions">
                 <button type="button" class="modal-cancel-button" onclick="closeReopenModal()">Cancel</button>
-                <button type="button" class="modal-confirm-button" onclick="submitReopenDay()">Reopen</button>
+                <button type="button" class="modal-confirm-button" onclick="submitReopenDay()">Edit this day</button>
             </div>
         </div>
     </div>
@@ -469,6 +474,12 @@
         let currentDayColumn = null;
         let currentDayIndex = null;
 
+        // null = viewing/editing the active day (today). Otherwise, the
+        // column key of a past day the counselor picked via "Edit day".
+        // This is purely a local UI selection — it never touches server
+        // state, so it can't shift the active day for other counselors.
+        let editingDayColumn = null;
+
         async function fetchConfig() {
             try {
                 const res = await fetch('/api/day-columns', { credentials: 'same-origin' });
@@ -485,14 +496,25 @@
             }
         }
 
+        function getEffectiveDayColumn() {
+            return editingDayColumn || currentDayColumn;
+        }
+
         function getTodayPoints(row) {
-            if (currentDayColumn) {
-                const val = row[currentDayColumn];
+            const col = getEffectiveDayColumn();
+            if (col) {
+                const val = row[col];
                 if (val === '' || val === undefined) return 0;
                 const parsed = Number(val);
                 if (Number.isFinite(parsed)) return parsed;
             }
             return 0;
+        }
+
+        function getEffectiveDayLabel() {
+            if (!editingDayColumn) return 'Points Today';
+            const idx = dayColumns.indexOf(editingDayColumn);
+            return `Points (Day ${idx + 1})`;
         }
 
         function getOverallPoints(row) {
@@ -513,10 +535,29 @@
                     : `All ${dayColumns.length} camp days captured`;
             }
 
+            const banner = document.getElementById('editing-day-banner');
+            const label = document.getElementById('editing-day-label');
+            if (banner && label) {
+                if (editingDayColumn) {
+                    const idx = dayColumns.indexOf(editingDayColumn);
+                    label.textContent = `Editing Day ${idx + 1} (past)`;
+                    banner.style.display = 'block';
+                } else {
+                    banner.style.display = 'none';
+                }
+            }
+
             const btn = document.getElementById('snapshot-button');
             if (!btn || Date.now() < snapshotMessageUntil) return;
 
             const dayIsActive = currentDayIndex && currentDayIndex <= dayColumns.length;
+            if (editingDayColumn) {
+                // Finishing "today" while looking at a past day would be
+                // confusing, so require going back to today first.
+                btn.textContent = 'Back to today to finish';
+                btn.disabled = true;
+                return;
+            }
             btn.textContent = dayIsActive ? `Finish Day ${currentDayIndex}` : 'All Days Captured';
             btn.disabled = !dayIsActive;
         }
@@ -703,7 +744,7 @@
                         <div class="control-meta">
                             <div class="points-row">
                                 <div class="overall-points" id="overall-${cleanKey}">${overallPoints}<span>Overall Points</span></div>
-                                <div class="current-points" id="pts-${cleanKey}">${todayPoints}<span>Points Today</span></div>
+                                <div class="current-points" id="pts-${cleanKey}">${todayPoints}<span>${getEffectiveDayLabel()}</span></div>
                             </div>
                             <div class="change-control">
                                 <input type="number" id="input-${cleanKey}" class="change-value" value="0" step="1">
@@ -741,7 +782,7 @@
                     const cleanKey = getCleanKey(getTeamName(row));
                     const ptsEl = document.getElementById(`pts-${cleanKey}`);
                     const overallEl = document.getElementById(`overall-${cleanKey}`);
-                    if (ptsEl) ptsEl.innerHTML = `${getTodayPoints(row)}<span>Points Today</span>`;
+                    if (ptsEl) ptsEl.innerHTML = `${getTodayPoints(row)}<span>${getEffectiveDayLabel()}</span>`;
                     if (overallEl) overallEl.innerHTML = `${getOverallPoints(row)}<span>Overall Points</span>`;
                 });
             } catch (error) {
@@ -834,8 +875,8 @@
         async function openReopenModal() {
             try {
                 const res = await fetch('/api/all-days', { credentials: 'same-origin' });
-                if (!res.ok) throw new Error("Failed fetching days registry index.");
-                
+                if (!res.ok) throw new Error("Failed fetching day list.");
+
                 const data = await res.json();
                 const dropdown = document.getElementById('day-select-dropdown');
                 dropdown.innerHTML = '';
@@ -843,9 +884,10 @@
                 if (data.days && data.days.length > 0) {
                     data.days.forEach(day => {
                         const option = document.createElement('option');
-                        option.value = day;
-                        option.textContent = day === data.active_day ? `${day} (Active)` : day;
-                        if (day === data.active_day) option.selected = true;
+                        option.value = day.column;
+                        const isActive = day.column === data.active_day;
+                        option.textContent = isActive ? `${day.label} (Today)` : day.label;
+                        if (day.column === (editingDayColumn || data.active_day)) option.selected = true;
                         dropdown.appendChild(option);
                     });
                     document.getElementById('reopen-modal').classList.add('is-open');
@@ -853,7 +895,7 @@
                     alert("No day columns are available to select.");
                 }
             } catch (err) {
-                alert("Error loading dynamic columns registry.");
+                alert("Error loading the day list.");
             }
         }
 
@@ -861,31 +903,25 @@
             document.getElementById('reopen-modal').classList.remove('is-open');
         }
 
-        async function submitReopenDay() {
+        // Selecting a day here is purely a local view/edit choice — it never
+        // calls the server or changes which day is active for anyone else.
+        // Score changes made while a past day is selected are sent with an
+        // explicit `day` param on /api/update-score.
+        function submitReopenDay() {
             const target = document.getElementById('day-select-dropdown').value;
-            if (!target) return;
-
-            const formData = new FormData();
-            formData.append('day', target);
-
-            try {
-                const res = await fetch('/api/reopen-day', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
-                });
-
-                const result = await res.json();
-                if (res.ok) {
-                    closeReopenModal();
-                    alert(result.message || `Successfully reopened "${target}"`);
-                    window.location.reload();
-                } else {
-                    alert("Error: " + (result.detail || "Unable to reopen day."));
-                }
-            } catch (err) {
-                alert("Failed to process day reopen request.");
+            if (!target) {
+                alert("Please select a day.");
+                return;
             }
+
+            editingDayColumn = (target === currentDayColumn) ? null : target;
+            closeReopenModal();
+            loadCounselorPanel();
+        }
+
+        function exitEditingDay() {
+            editingDayColumn = null;
+            loadCounselorPanel();
         }
 
         async function submitScore(cleanKey) {
@@ -899,6 +935,8 @@
                 const formData = new FormData();
                 formData.append('team', teamName);
                 formData.append('change', val);
+                const dayToEdit = getEffectiveDayColumn();
+                if (dayToEdit) formData.append('day', dayToEdit);
 
                 const res = await fetch('/api/update-score', {
                     method: 'POST',
@@ -914,7 +952,11 @@
                 }
 
                 if (res.ok) {
-                    document.getElementById(`pts-${cleanKey}`).innerHTML = `${data.new_score}<span>Points Today</span>`;
+                    document.getElementById(`pts-${cleanKey}`).innerHTML = `${data.new_score}<span>${getEffectiveDayLabel()}</span>`;
+                    if (data.new_summary !== null && data.new_summary !== undefined) {
+                        const overallEl = document.getElementById(`overall-${cleanKey}`);
+                        if (overallEl) overallEl.innerHTML = `${data.new_summary}<span>Overall Points</span>`;
+                    }
                     setChangeValue(cleanKey, 0);
                 } else {
                     alert(data?.detail ?? 'Session expired or error saving update.');
