@@ -179,6 +179,11 @@ async def update_score(
 ):
     if change == 0:
         raise HTTPException(status_code=400, detail="Change must be non-zero")
+    
+    try:
+        change = int(change)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Change must be a whole number")
 
     configured_days = [c for c in DAY_COLUMNS if c]
     if not configured_days:
