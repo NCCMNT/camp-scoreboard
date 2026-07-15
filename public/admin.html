@@ -6,6 +6,12 @@
     <title>Funtime Control Panel</title>
     <link rel="stylesheet" href="style.css">
     <style>
+@media (max-width: 640px) {
+    .block-container {
+        margin-top: 0.5rem;
+    }
+}
+
 .controls-list {
             display: grid;
             gap: 0.9rem;
@@ -219,14 +225,22 @@
         }
 
         .bottom-actions {
+            position: sticky;
+            bottom: 0;
             display: grid;
-            grid-template-columns: 1fr 1.6fr 1.6fr;
+            grid-template-columns: 1fr 1.5fr 1.7fr;
             gap: 0.6rem;
             margin-top: 1.75rem;
+            padding: 0.85rem 0 calc(0.85rem + env(safe-area-inset-bottom));
             width: 100%;
+            background: linear-gradient(to top, var(--bg-main) 68%, transparent);
         }
 
         .bottom-actions button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
             width: 100%;
             min-width: 0;
             height: 3.1rem;
@@ -234,21 +248,42 @@
             font-size: 0.85rem;
             line-height: 1.2;
             white-space: normal;
-            border-radius: 8px;
+            border-radius: 10px;
             font-weight: 700;
             cursor: pointer;
-            transition: background-color 0.15s, border-color 0.15s, filter 0.15s, transform 0.1s;
+            transition: background-color 0.15s, border-color 0.15s, filter 0.15s, transform 0.1s, box-shadow 0.15s;
         }
 
+        .bottom-actions button::before {
+            content: '';
+            width: 1.05rem;
+            height: 1.05rem;
+            flex-shrink: 0;
+            background-color: currentColor;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+            -webkit-mask-size: contain;
+            mask-size: contain;
+        }
+
+        /* Quietest action — signing out */
         .bottom-actions .logout-button {
             background: transparent;
-            color: var(--text);
+            color: var(--muted);
             border: 1px solid var(--border);
+        }
+
+        .bottom-actions .logout-button::before {
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpolyline points='16 17 21 12 16 7'/%3E%3Cline x1='21' y1='12' x2='9' y2='12'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpolyline points='16 17 21 12 16 7'/%3E%3Cline x1='21' y1='12' x2='9' y2='12'/%3E%3C/svg%3E");
         }
 
         .bottom-actions .logout-button:hover:not(:disabled) {
             background-color: rgba(255, 255, 255, 0.04);
             border-color: rgba(255, 255, 255, 0.25);
+            color: var(--text);
         }
 
         .bottom-actions .logout-button:active:not(:disabled) {
@@ -256,25 +291,43 @@
             transform: scale(0.98);
         }
 
+        /* Secondary action — steps outside today without leaving it */
         .bottom-actions .reopen-trigger-button {
-            background-color: #b65624;
-            color: #ffffff;
-            border: none;
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
         }
 
+        .bottom-actions .reopen-trigger-button::before {
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E");
+        }
+
+        .bottom-actions .reopen-trigger-button:hover:not(:disabled) {
+            background-color: var(--accent-glow);
+        }
+
+        .bottom-actions .reopen-trigger-button:active:not(:disabled) {
+            background-color: var(--accent-glow);
+            transform: scale(0.98);
+        }
+
+        /* Primary action — the one thing that should draw the eye */
         .bottom-actions .snapshot-button {
             background-color: #b65624;
             color: #ffffff;
             border: none;
+            box-shadow: 0 6px 16px rgba(182, 86, 36, 0.35);
         }
 
-        .bottom-actions .reopen-trigger-button:hover:not(:disabled),
+        .bottom-actions .snapshot-button::before {
+            content: none;
+        }
+
         .bottom-actions .snapshot-button:hover:not(:disabled) {
             filter: brightness(1.08);
-            box-shadow: none;
         }
 
-        .bottom-actions .reopen-trigger-button:active:not(:disabled),
         .bottom-actions .snapshot-button:active:not(:disabled) {
             filter: brightness(0.92);
             transform: scale(0.98);
@@ -390,6 +443,42 @@
             border-color: #b65624;
         }
 
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 6.5rem;
+            transform: translateX(-50%) translateY(12px);
+            width: max-content;
+            max-width: min(88vw, 380px);
+            background: linear-gradient(160deg, var(--bg-card), var(--bg-main));
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem 1.1rem;
+            font-size: 0.86rem;
+            font-weight: 600;
+            line-height: 1.4;
+            color: var(--text);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 2000;
+            text-align: center;
+        }
+
+        .toast.is-visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.is-error {
+            border-color: #b65624;
+        }
+
+        .toast.is-error::before {
+            content: '⚠ ';
+        }
+
     </style>
 </head>
 <body>
@@ -413,7 +502,7 @@
             </div>
             <div id="counselor-rows" class="controls-list"></div>
             <div class="bottom-actions">
-                <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Logout</button>
+                <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
                 <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
                 <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
             </div>
@@ -450,10 +539,22 @@
     </div>
 
     <input type="file" id="emblem-file-input" accept="image/*" style="display: none;">
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script>
         const teamLookup = {};
         let activeUploadKey = null;
+
+        let toastTimeout = null;
+        function showToast(message, { type = 'info', duration = 2800 } = {}) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = message;
+            toast.classList.toggle('is-error', type === 'error');
+            toast.classList.add('is-visible');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('is-visible'), duration);
+        }
 
         function getTeamName(row) {
             return row.Team ?? row.team_name ?? row.team ?? 'Unknown Team';
@@ -558,7 +659,7 @@
                 btn.disabled = true;
                 return;
             }
-            btn.textContent = dayIsActive ? `Finish Day ${currentDayIndex}` : 'All Days Captured';
+            btn.textContent = dayIsActive ? `Finish day ${currentDayIndex}` : 'All Days Captured';
             btn.disabled = !dayIsActive;
         }
 
@@ -647,10 +748,10 @@
                                     imgElement.style.display = 'block'; 
                                 }
                             } else {
-                                alert('Failed to save emblem.');
+                                showToast('Failed to save emblem.', { type: 'error' });
                             }
                         } catch (err) {
-                            alert('Network error while saving emblem.');
+                            showToast('Network error while saving emblem.', { type: 'error' });
                         }
                     }, 'image/png');
                 };
@@ -680,7 +781,7 @@
             if(res.ok) {
                 loadCounselorPanel();
             } else {
-                alert('Incorrect Camp PIN');
+                showToast('Incorrect Camp PIN', { type: 'error' });
             }
         }
 
@@ -833,9 +934,9 @@
 
             const confirmed = await showConfirmModal(
                 currentDayIndex
-                    ? `Finish day ${currentDayIndex}? This locks in today's points and can't be undone.`
+                    ? `Do you want to finish day ${currentDayIndex}? This locks in today's points and adds them to summary, can't be undone.`
                     : `Capture this snapshot? This can't be undone.`,
-                { title: 'Snapshot camp day', confirmLabel: 'Snapshot' }
+                { title: 'Finish this day', confirmLabel: 'Capture' }
             );
             if (!confirmed) return;
 
@@ -892,10 +993,10 @@
                     });
                     document.getElementById('reopen-modal').classList.add('is-open');
                 } else {
-                    alert("No day columns are available to select.");
+                    showToast('No day columns are available to select.', { type: 'error' });
                 }
             } catch (err) {
-                alert("Error loading the day list.");
+                showToast('Error loading the day list.', { type: 'error' });
             }
         }
 
@@ -910,13 +1011,19 @@
         function submitReopenDay() {
             const target = document.getElementById('day-select-dropdown').value;
             if (!target) {
-                alert("Please select a day.");
+                showToast('Please select a day.', { type: 'error' });
                 return;
             }
 
             editingDayColumn = (target === currentDayColumn) ? null : target;
             closeReopenModal();
             loadCounselorPanel();
+            if (editingDayColumn) {
+                const idx = dayColumns.indexOf(editingDayColumn);
+                showToast(`Now editing Day ${idx + 1}`);
+            } else {
+                showToast("Back to today's active day");
+            }
         }
 
         function exitEditingDay() {
@@ -927,7 +1034,10 @@
         async function submitScore(cleanKey) {
             const teamName = teamLookup[cleanKey];
             const val = getChangeValue(cleanKey);
-            if (val === 0) return alert('Enter a value first.');
+            if (val === 0) {
+                showToast('Enter a value first.', { type: 'error' });
+                return;
+            }
 
             setSavingState(cleanKey, true);
 
@@ -959,7 +1069,7 @@
                     }
                     setChangeValue(cleanKey, 0);
                 } else {
-                    alert(data?.detail ?? 'Session expired or error saving update.');
+                    showToast(data?.detail ?? 'Session expired or error saving update.', { type: 'error' });
                     checkAuth();
                 }
             } finally {
