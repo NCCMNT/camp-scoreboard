@@ -1,3 +1,5 @@
+from fastapi.responses import FileResponse
+from pathlib import Path
 import logging
 import os
 import shutil
@@ -33,6 +35,8 @@ logger = logging.getLogger("uvicorn.error")
 CAMP_PIN = os.environ.get("CAMP_PIN")
 CRON_SECRET = os.environ.get("CRON_SECRET")
 
+BASE_DIR = Path(__file__).resolve().parent
+PUBLIC_DIR = BASE_DIR / "public"
 UPLOAD_DIR = "/tmp/emblems" if os.environ.get("VERCEL") else "public/emblems"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -338,7 +342,16 @@ async def manual_sync_to_sheets():
         logger.error(f"Manual sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
 
+@app.get("/")
+async def serve_index():
+    index_path = PUBLIC_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    raise HTTPException(status_code=404, detail="index.html not found")
+
+
+if PUBLIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(PUBLIC_DIR), html=True), name="static")
 
 if os.path.exists("public/emblems"):
     app.mount("/emblems", StaticFiles(directory="public/emblems"), name="emblems")
-app.mount("/", StaticFiles(directory="public", html=True), name="static")
