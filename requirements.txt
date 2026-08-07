@@ -1,7 +1,6 @@
 fastapi
 uvicorn
+python-multipart
 gspread
-pandas
-dotenv
-pillow
-logging
+python-dotenv
+colorgram.py

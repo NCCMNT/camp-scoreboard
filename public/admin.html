@@ -228,8 +228,8 @@
             position: sticky;
             bottom: 0;
             display: grid;
-            grid-template-columns: 1fr 1.5fr 1.7fr;
-            gap: 0.6rem;
+            grid-template-columns: 0.9fr 1fr 1.3fr 1.5fr;
+            gap: 0.5rem;
             margin-top: 1.75rem;
             padding: 0.85rem 0 calc(0.85rem + env(safe-area-inset-bottom));
             width: 100%;
@@ -288,6 +288,27 @@
 
         .bottom-actions .logout-button:active:not(:disabled) {
             background-color: rgba(255, 255, 255, 0.08);
+            transform: scale(0.98);
+        }
+
+        /* Secondary action — pushes local state to Google Sheets on demand */
+        .bottom-actions .sync-button {
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
+        }
+
+        .bottom-actions .sync-button::before {
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'/%3E%3Cpolyline points='1 20 1 14 7 14'/%3E%3Cpath d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'/%3E%3Cpolyline points='1 20 1 14 7 14'/%3E%3Cpath d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/%3E%3C/svg%3E");
+        }
+
+        .bottom-actions .sync-button:hover:not(:disabled) {
+            background-color: var(--accent-glow);
+        }
+
+        .bottom-actions .sync-button:active:not(:disabled) {
+            background-color: var(--accent-glow);
             transform: scale(0.98);
         }
 
@@ -504,6 +525,7 @@
             <div class="bottom-actions">
                 <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
                 <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
+                <button type="button" id="sync-button" class="sync-button" onclick="syncToSheets()">Sync</button>
                 <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
             </div>
         </div>
@@ -983,6 +1005,41 @@
             } finally {
                 snapshotMessageUntil = Date.now() + 3000;
                 setTimeout(updateDayIndicator, 3000);
+            }
+        }
+
+        async function syncToSheets() {
+            const button = document.getElementById('sync-button');
+            const originalLabel = button.textContent;
+
+            button.disabled = true;
+            button.textContent = 'Syncing…';
+
+            try {
+                const res = await fetch('/api/sync-to-sheets', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (error) {
+                    data = null;
+                }
+
+                if (res.ok) {
+                    button.textContent = 'Synced ✓';
+                } else {
+                    button.textContent = formatErrorDetail(data?.detail, 'Sync failed').slice(0, 30);
+                }
+            } catch (error) {
+                button.textContent = 'Network error — retry';
+            } finally {
+                setTimeout(() => {
+                    button.textContent = originalLabel;
+                    button.disabled = false;
+                }, 3000);
             }
         }
 
