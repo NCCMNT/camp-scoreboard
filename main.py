@@ -40,6 +40,7 @@ PUBLIC_DIR = BASE_DIR / "public"
 UPLOAD_DIR = Path("/tmp/emblems") if os.environ.get("VERCEL") else PUBLIC_DIR / "emblems"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+@app.post("/api/reset-and-sync", dependencies=[Depends(verify_session)])
 def reset_and_sync_from_sheets() -> dict:
     """1. Truncates DB tables.
     2. Resets current active day to 0 (Day 1).
@@ -454,6 +455,7 @@ async def update_team(
             (new_team.strip(), old_team)
         )
     return {"status": "success", "team": new_team.strip(), "leader": leader.strip()}
+    
 
 @app.get("/")
 async def serve_index():
