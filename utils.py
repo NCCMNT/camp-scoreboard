@@ -84,12 +84,19 @@ def set_current_day_index(index: int) -> None:
 
 
 def get_sheet_client() -> gspread.Spreadsheet:
-    """Open the configured Google Sheets workbook."""
-    secret_json_str = os.environ.get("G_SERVICE_ACCOUNT_JSON")
+    """Open the configured Google Sheets workbook safely."""
+    secret_json_str = os.environ.get("G_SERVICE_ACCOUNT_JSON", "").strip()
     if not secret_json_str:
         raise ValueError("Critical error: G_SERVICE_ACCOUNT_JSON is missing.")
 
-    credentials_info = json.loads(secret_json_str)
+    try:
+        credentials_info = json.loads(secret_json_str)
+    except Exception as err:
+        raise ValueError(f"Critical error: G_SERVICE_ACCOUNT_JSON is invalid JSON. Details: {err}")
+
+    if not SPREADSHEET_NAME:
+        raise ValueError("Critical error: SPREADSHEET_NAME environment variable is missing.")
+
     client = gspread.service_account_from_dict(credentials_info)
     return client.open(SPREADSHEET_NAME)
 

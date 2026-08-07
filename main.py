@@ -37,14 +37,32 @@ CRON_SECRET = os.environ.get("CRON_SECRET")
 
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
-UPLOAD_DIR = "/tmp/emblems" if os.environ.get("VERCEL") else "public/emblems"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = Path("/tmp/emblems") if os.environ.get("VERCEL") else PUBLIC_DIR / "emblems"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-ensure_day_columns()
-bootstrap_if_empty()
+
+@app.on_event("startup")
+async def startup_event():
+    try:
+        bootstrap_if_empty()
+    except Exception as exc:
+        logger.error("Startup bootstrap skipped due to error: %s", exc)
+
+
+@app.get("/api/health")
+async def health_check():
+    """Use this endpoint to verify your Vercel deployment status."""
+    return {
+        "status": "online",
+        "has_pin": bool(CAMP_PIN),
+        "has_sheet_name": bool(os.environ.get("SPREADSHEET_NAME")),
+        "has_service_account": bool(os.environ.get("G_SERVICE_ACCOUNT_JSON")),
+        "has_turso": bool(os.environ.get("TURSO_DATABASE_URL")),
+    }
 
 
 # --- ENDPOINTS ---
+
 
 @app.post("/api/upload-emblem")
 async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...)):
@@ -102,6 +120,7 @@ async def login(request: Request, response: Response):
         key="counselor_session",
         value="authenticated_token",
         httponly=True,
+        secure=True,
         max_age=SESSION_MAX_AGE_SECONDS,
         path="/",
         samesite="lax",
@@ -120,7 +139,11 @@ async def auth_status(request: Request):
 
 @app.get("/api/scores")
 async def get_scores():
-    teams = db.execute("SELECT * FROM teams")
+    try:
+        teams = db.execute("SELECT * FROM teams")
+    except Exception as e:
+        logger.error("Error fetching teams: %s", e)
+        teams = []
 
     results = []
     for t in teams:
@@ -363,16 +386,8 @@ async def serve_index():
     index_path = PUBLIC_DIR / "index.html"
     if index_path.exists():
         return FileResponse(index_path)
-    raise HTTPException(status_code=404, detail="index.html not found in public folder")
+    raise HTTPException(status_code=404, detail="index.html not found")
 
-@app.get("/api/health")
-async def health_check():
-    return {
-        "status": "ok",
-        "has_pin": bool(os.environ.get("CAMP_PIN")),
-        "has_sheet": bool(os.environ.get("SPREADSHEET_NAME")),
-        "has_turso": bool(os.environ.get("TURSO_DATABASE_URL"))
-    }
 
 if PUBLIC_DIR.exists():
     app.mount("/", StaticFiles(directory=str(PUBLIC_DIR), html=True), name="static")
