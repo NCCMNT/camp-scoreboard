@@ -9,7 +9,6 @@ dependencies = [
     "dotenv>=0.9.9",
     "fastapi>=0.139.0",
     "gspread>=5.12.4",
-    "logging>=0.4.9.6",
     "pandas>=3.0.3",
     "pillow>=12.3.0",
     "python-dotenv>=1.2.2",
