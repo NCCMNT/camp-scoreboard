@@ -1,28 +1,47 @@
 import os
 import json
 import sqlite3
+import logging
 from dotenv import load_dotenv
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 load_dotenv()
 
-DATABASE_URL = os.environ.get("TURSO_DATABASE_URL")
-AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN")
-LOCAL_DB_FILE = os.environ.get("LOCAL_DB_FILE", "camp_data.db")
+logger = logging.getLogger(__name__)
+
+DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "").strip().strip("'\"")
+AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip().strip("'\"")
+
+default_local_db = "/tmp/camp_data.db" if os.environ.get("VERCEL") else "camp_data.db"
+LOCAL_DB_FILE = os.environ.get("LOCAL_DB_FILE", default_local_db).strip().strip("'\"")
+
 
 class DatabaseManager:
     def __init__(self):
         self.is_turso = bool(DATABASE_URL and AUTH_TOKEN)
         if self.is_turso:
             url = DATABASE_URL.replace("libsql://", "https://")
-            self.turso_url = f"{url}/v2/pipeline"
+            if not url.startswith("http"):
+                url = f"https://{url}"
+            self.turso_url = f"{url.rstrip('/')}/v2/pipeline"
             self.headers = {
                 "Authorization": f"Bearer {AUTH_TOKEN}",
                 "Content-Type": "application/json"
             }
-        self.init_db()
+        
+        # Safely attempt database schema initialization
+        try:
+            self.init_db()
+        except Exception as e:
+            logger.error("Failed to initialize database schema on startup: %s", str(e))
 
     def _execute_local(self, sql: str, params: tuple = ()):
+        # Ensure directory exists if path contains directories
+        db_dir = os.path.dirname(LOCAL_DB_FILE)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+
         conn = sqlite3.connect(LOCAL_DB_FILE)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -64,22 +83,37 @@ class DatabaseManager:
             method="POST",
         )
 
-        with urlopen(request, timeout=10.0) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            
-            result = data["results"][0]["response"]["result"]
-            cols = [c["name"] for c in result["cols"]]
-            rows = []
-            for r in result["rows"]:
-                row_dict = {}
-                for idx, col_name in enumerate(cols):
-                    val_obj = r[idx]
-                    val = val_obj.get("value")
-                    if val_obj.get("type") == "integer" and val is not None:
-                        val = int(val)
-                    row_dict[col_name] = val
-                rows.append(row_dict)
-            return rows
+        try:
+            with urlopen(request, timeout=10.0) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            raise Exception(f"Turso HTTP Error {e.code}: {err_body}") from e
+        except URLError as e:
+            raise Exception(f"Turso Connection Error: {e.reason}") from e
+
+        results = data.get("results", [])
+        if not results:
+            return []
+
+        first_res = results[0]
+        if first_res.get("type") == "error":
+            err_msg = first_res.get("error", {}).get("message", "Unknown Turso Error")
+            raise Exception(f"Turso Execution Error: {err_msg}")
+
+        res_body = first_res.get("response", {}).get("result", {})
+        cols = [c["name"] for c in res_body.get("cols", [])]
+        rows = []
+        for r in res_body.get("rows", []):
+            row_dict = {}
+            for idx, col_name in enumerate(cols):
+                val_obj = r[idx]
+                val = val_obj.get("value")
+                if val_obj.get("type") == "integer" and val is not None:
+                    val = int(val)
+                row_dict[col_name] = val
+            rows.append(row_dict)
+        return rows
 
     def execute(self, sql: str, params: tuple = ()):
         if self.is_turso:
@@ -108,10 +142,7 @@ class DatabaseManager:
         if not existing:
             self.execute("INSERT INTO app_state (key, value) VALUES ('current_day_index', '0')")
 
-        # Teams & Points Table. Day columns (day_1, day_2, ...) are no longer
-        # fixed here - they're added on demand by utils.ensure_day_columns()
-        # based on however many days are configured, so the schema is not
-        # capped at 6 camp days.
+        # Teams & Points Table
         self.execute("""
             CREATE TABLE IF NOT EXISTS teams (
                 team TEXT PRIMARY KEY,
@@ -134,5 +165,6 @@ class DatabaseManager:
                 synced INTEGER DEFAULT 0
             )
         """)
+
 
 db = DatabaseManager()
