@@ -78,19 +78,35 @@ async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...
     }
 
 @app.post("/api/login")
-async def login(response: Response, pin: str = Form(...)):
-    if pin == CAMP_PIN:
-        # Keep the counselor logged in on mobile browsers.
-        response.set_cookie(
-            key="counselor_session",
-            value="authenticated_token",
-            httponly=True,
-            max_age=SESSION_MAX_AGE_SECONDS,
-            expires=SESSION_MAX_AGE_SECONDS,
-            path="/",
-        )
-        return {"status": "success", "message": "Authenticated successfully"}
-    raise HTTPException(status_code=401, detail="Incorrect PIN")
+async def login(request: Request, response: Response):
+    submitted_pin = ""
+    content_type = request.headers.get("content-type", "")
+
+    if "application/json" in content_type:
+        try:
+            data = await request.json()
+            submitted_pin = str(data.get("pin", ""))
+        except Exception:
+            submitted_pin = ""
+    else:
+        form = await request.form()
+        submitted_pin = str(form.get("pin", ""))
+
+    expected_pin = str(os.environ.get("CAMP_PIN", "")).strip().strip("'\"")
+    submitted_pin = submitted_pin.strip().strip("'\"")
+
+    if not expected_pin or submitted_pin != expected_pin:
+        raise HTTPException(status_code=401, detail="Incorrect PIN")
+
+    response.set_cookie(
+        key="counselor_session",
+        value="authenticated_token",
+        httponly=True,
+        max_age=SESSION_MAX_AGE_SECONDS,
+        path="/",
+        samesite="lax",
+    )
+    return {"status": "success", "message": "Authenticated successfully"}
 
 @app.post("/api/logout")
 async def logout(response: Response):
@@ -347,8 +363,16 @@ async def serve_index():
     index_path = PUBLIC_DIR / "index.html"
     if index_path.exists():
         return FileResponse(index_path)
-    raise HTTPException(status_code=404, detail="index.html not found")
+    raise HTTPException(status_code=404, detail="index.html not found in public folder")
 
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "has_pin": bool(os.environ.get("CAMP_PIN")),
+        "has_sheet": bool(os.environ.get("SPREADSHEET_NAME")),
+        "has_turso": bool(os.environ.get("TURSO_DATABASE_URL"))
+    }
 
 if PUBLIC_DIR.exists():
     app.mount("/", StaticFiles(directory=str(PUBLIC_DIR), html=True), name="static")
