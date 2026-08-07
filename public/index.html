@@ -6,6 +6,22 @@
     <title>Funtime Leaderboard</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        @font-face {
+            font-family: 'Insula';
+            src: url('fonts/INSULA__.ttf') format('truetype'),
+                 url('INSULA__.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        h1, h2, h3,
+        p,
+        .team-title,
+        .emblem-fallback {
+            font-family: 'Insula', system-ui, sans-serif !important;
+        }
+
         .block-container {
             max-width: 1100px;
         }
@@ -111,6 +127,7 @@
             letter-spacing: 0.08rem;
             text-transform: uppercase;
             color: var(--muted);
+            font-family: 'Insula', sans-serif;
         }
 
         .trend-arrow {

@@ -3,6 +3,8 @@ from pathlib import Path
 import logging
 import os
 import shutil
+import base64
+import io
 from datetime import datetime
 
 import gspread
@@ -39,6 +41,7 @@ BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
 UPLOAD_DIR = Path("/tmp/emblems") if os.environ.get("VERCEL") else PUBLIC_DIR / "emblems"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 
 @app.post("/api/reset-and-sync", dependencies=[Depends(verify_session)])
 def reset_and_sync_from_sheets() -> dict:
@@ -79,6 +82,7 @@ def reset_and_sync_from_sheets() -> dict:
         "imported_teams": imported_teams
     }
 
+
 @app.on_event("startup")
 async def startup_event():
     try:
@@ -99,39 +103,54 @@ async def health_check():
     }
 
 
-# --- ENDPOINTS ---
-
-
 @app.post("/api/upload-emblem")
 async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...)):
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    file_location = f"{UPLOAD_DIR}/{team_key}.png"
-    
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(emblem.file, buffer)
-    
     try:
-        import colorgram
-        colors = colorgram.extract(file_location, 2)
-        hex_colors = ['#{:02x}{:02x}{:02x}'.format(c.rgb.r, c.rgb.g, c.rgb.b) for c in colors]
-    except Exception:
-        hex_colors = ["#FFFFFF", "#000000"]
-    
-    p_color = hex_colors[0] if len(hex_colors) > 0 else "#FFFFFF"
-    s_color = hex_colors[1] if len(hex_colors) > 1 else "#000000"
-    emblem_url = f"/emblems/{team_key}.png"
+        contents = await emblem.read()
+        
+        encoded_image = base64.b64encode(contents).decode("utf-8")
+        data_url = f"data:image/png;base64,{encoded_image}"
 
-    db.execute(
-        "UPDATE teams SET emblem_url = ?, primary_color = ?, secondary_color = ? WHERE team = ?",
-        (emblem_url, p_color, s_color, team_key)
-    )
+        p_color, s_color = "#FFFFFF", "#000000"
+        try:
+            import colorgram
+            colors = colorgram.extract(io.BytesIO(contents), 2)
+            hex_colors = ['#{:02x}{:02x}{:02x}'.format(c.rgb.r, c.rgb.g, c.rgb.b) for c in colors]
+            p_color = hex_colors[0] if len(hex_colors) > 0 else "#FFFFFF"
+            s_color = hex_colors[1] if len(hex_colors) > 1 else "#000000"
+        except Exception:
+            pass
+
+        db.execute(
+            "UPDATE teams SET emblem_url = ?, primary_color = ?, secondary_color = ? WHERE team = ?",
+            (data_url, p_color, s_color, team_key)
+        )
+        
+        return {
+            "status": "success",
+            "emblem_url": f"/emblems/{team_key}.png",
+            "primary_color": p_color,
+            "secondary_color": s_color
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@app.get("/emblems/{filename}")
+async def get_emblem(filename: str):
+    """Serve team emblem images directly out of Turso DB."""
+    team_key = filename.replace(".png", "")
+    rows = db.execute("SELECT emblem_url FROM teams WHERE team = ?", (team_key,))
     
-    return {
-        "status": "success",
-        "emblem_url": emblem_url,
-        "primary_color": p_color,
-        "secondary_color": s_color
-    }
+    if rows and rows[0].get("emblem_url"):
+        data_url = rows[0]["emblem_url"]
+        if data_url and data_url.startswith("data:image"):
+            _, encoded = data_url.split(",", 1)
+            img_bytes = base64.b64decode(encoded)
+            return Response(content=img_bytes, media_type="image/png")
+
+    raise HTTPException(status_code=404, detail="Emblem image not found")
+
 
 @app.post("/api/login")
 async def login(request: Request, response: Response):
@@ -165,15 +184,18 @@ async def login(request: Request, response: Response):
     )
     return {"status": "success", "message": "Authenticated successfully"}
 
+
 @app.post("/api/logout")
 async def logout(response: Response):
     response.delete_cookie("counselor_session", path="/")
     return {"status": "success"}
 
+
 @app.get("/api/auth")
 async def auth_status(request: Request):
     verify_session(request)
     return {"authenticated": True}
+
 
 @app.get("/api/scores")
 async def get_scores():
@@ -201,6 +223,7 @@ async def get_scores():
 
     return results
 
+
 @app.get("/api/day-columns")
 async def day_columns():
     """Return the configured day columns and the current active day."""
@@ -216,6 +239,7 @@ async def day_columns():
         "currentDayColumn": current_day_col,
         "currentDayIndex": current_day_idx
     }
+
 
 @app.post("/api/update-score", dependencies=[Depends(verify_session)])
 async def update_score(
@@ -274,6 +298,7 @@ async def update_score(
         "new_summary": updated_team.get("points", 0),
     }
 
+
 @app.post("/api/capture-snapshot", dependencies=[Depends(verify_session)])
 async def capture_snapshot():
     """Capture the current active day and advance the day pointer."""
@@ -308,6 +333,7 @@ async def capture_snapshot():
         "captured": captured
     }
 
+
 @app.get("/api/all-days", dependencies=[Depends(verify_session)])
 async def get_all_days():
     try:
@@ -330,6 +356,7 @@ async def get_all_days():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 def _perform_sheets_sync() -> dict:
     """Push local SQLite/Turso state to Google Sheets safely and efficiently."""
@@ -438,6 +465,7 @@ async def manual_sync_to_sheets():
         logger.error(f"Manual sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
 
+
 @app.post("/api/update-team", dependencies=[Depends(verify_session)])
 async def update_team(
     old_team: str = Form(...),
@@ -467,6 +495,3 @@ async def serve_index():
 
 if PUBLIC_DIR.exists():
     app.mount("/", StaticFiles(directory=str(PUBLIC_DIR), html=True), name="static")
-
-if os.path.exists("public/emblems"):
-    app.mount("/emblems", StaticFiles(directory="public/emblems"), name="emblems")

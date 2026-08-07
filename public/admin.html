@@ -6,13 +6,24 @@
     <title>Funtime Control Panel</title>
     <link rel="stylesheet" href="style.css">
     <style>
-@media (max-width: 640px) {
-    .block-container {
-        margin-top: 0.5rem;
-    }
-}
+        @font-face {
+            font-family: 'Insula';
+            src: url('fonts/INSULA__.ttf') format('truetype'),
+                 url('INSULA__.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
 
-.controls-list {
+        h2, h3,
+        p,
+        .modal-message,
+        #camp-day-indicator,
+        .team-title-input {
+            font-family: 'Insula', system-ui, sans-serif !important;
+        }
+
+        .controls-list {
             display: grid;
             gap: 0.9rem;
         }
@@ -30,7 +41,6 @@
             border-radius: 6px;
             padding: 0.15rem 0.3rem;
             width: 100%;
-            font-family: inherit;
             transition: border-color 0.15s, background-color 0.15s;
         }
 
@@ -116,6 +126,7 @@
             font-size: 1.3rem;
             font-weight: 800;
             color: var(--text);
+            font-family: 'Insula', sans-serif;
         }
 
         .control-meta {
@@ -150,6 +161,7 @@
             letter-spacing: 0.08rem;
             text-transform: uppercase;
             color: var(--muted);
+            font-family: 'Insula', sans-serif;
         }
 
         .overall-points {
@@ -169,6 +181,7 @@
             text-transform: uppercase;
             color: var(--muted);
             opacity: 0.75;
+            font-family: 'Insula', sans-serif;
         }
 
         .change-control {
@@ -266,7 +279,8 @@
             margin-top: 1.75rem;
             padding: 0.85rem 0 calc(0.85rem + env(safe-area-inset-bottom));
             width: 100%;
-            background: linear-gradient(to top, var(--bg-main) 68%, transparent);
+            background: linear-gradient(to top, var(--bg-main) 75%, transparent);
+            z-index: 50;
         }
 
         .bottom-actions button {
@@ -391,6 +405,39 @@
             filter: none !important;
         }
 
+        @media (max-width: 640px) {
+            .block-container {
+                margin-top: 0.5rem;
+            }
+
+            .bottom-actions {
+                grid-template-columns: 0.8fr 1.1fr 1.1fr;
+                gap: 0.55rem;
+                padding-top: 0.75rem;
+            }
+
+            .bottom-actions .snapshot-button {
+                grid-column: 1 / -1;
+                height: 3.2rem;
+                font-size: 0.95rem;
+            }
+
+            .bottom-actions button {
+                height: 2.85rem;
+                font-size: 0.82rem;
+                padding-inline: 0.35rem;
+            }
+
+            .change-value {
+                width: 3.8rem;
+                font-size: 0.95rem;
+            }
+
+            .change-button {
+                width: 2.75rem;
+            }
+        }
+
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -419,7 +466,6 @@
 
         .modal-card h3 {
             margin: 0 0 0.6rem;
-            font-family: var(--font);
             font-size: 1.2rem;
             font-weight: 800;
             color: var(--text);
@@ -500,7 +546,6 @@
             color: var(--text);
             border: 1px solid var(--border);
             border-radius: 8px;
-            font-family: var(--font);
             font-size: 1rem;
             font-weight: 600;
             margin-bottom: 1.5rem;
@@ -546,7 +591,6 @@
         .toast.is-error::before {
             content: '⚠ ';
         }
-
     </style>
 </head>
 <body>
