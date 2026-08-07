@@ -40,6 +40,43 @@ PUBLIC_DIR = BASE_DIR / "public"
 UPLOAD_DIR = Path("/tmp/emblems") if os.environ.get("VERCEL") else PUBLIC_DIR / "emblems"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+def reset_and_sync_from_sheets() -> dict:
+    """1. Truncates DB tables.
+    2. Resets current active day to 0 (Day 1).
+    3. Pulls team names & leaders from Google Sheets into DB.
+    """
+    # Step 1: Ensure day columns exist in schema
+    ensure_day_columns()
+
+    # Step 2: Reset day pointer to first day (0)
+    set_current_day_index(0)
+
+    # Step 3: Clear DB values (truncate logs & teams)
+    db.execute("DELETE FROM logs")
+    db.execute("DELETE FROM teams")
+
+    # Step 4: Pull team names and leaders from Google Sheets
+    client = get_sheet_client()
+    score_sheet = client.worksheet(SCORE_WORKSHEET)
+    records = score_sheet.get_all_records()
+
+    imported_teams = 0
+    for rec in records:
+        team_name = str(rec.get(TEAM_COLUMN, "")).strip()
+        leader_name = str(rec.get(LEADER_COLUMN, "")).strip() if LEADER_COLUMN else ""
+
+        if team_name:
+            db.execute(
+                "INSERT INTO teams (team, leader, points) VALUES (?, ?, 0)",
+                (team_name, leader_name)
+            )
+            imported_teams += 1
+
+    return {
+        "status": "success",
+        "message": "Database truncated, day reset to 1, and teams synced.",
+        "imported_teams": imported_teams
+    }
 
 @app.on_event("startup")
 async def startup_event():
@@ -294,60 +331,79 @@ async def get_all_days():
         raise HTTPException(status_code=500, detail=str(e))
 
 def _perform_sheets_sync() -> dict:
-    """Push local SQLite state to Google Sheets. Shared by the cron and manual endpoints."""
+    """Push local SQLite/Turso state to Google Sheets safely and efficiently."""
     client = get_sheet_client()
 
-    # Sync scores & points to SCORE_WORKSHEET
+    # 1. Sync scores, leaders & points to SCORE_WORKSHEET
     teams = db.execute("SELECT * FROM teams")
     if teams:
         score_sheet = client.worksheet(SCORE_WORKSHEET)
         header_row = score_sheet.row_values(1)
 
-        ensure_column(score_sheet, header_row, TEAM_COLUMN)
+        team_col_idx = ensure_column(score_sheet, header_row, TEAM_COLUMN)
+        leader_col_idx = ensure_column(score_sheet, header_row, LEADER_COLUMN) if LEADER_COLUMN else None
         points_col_idx = ensure_column(score_sheet, header_row, POINTS_COLUMN) if POINTS_COLUMN else None
 
-        # Day columns are written under their configured sheet label
-        # (e.g. "Day 1"), not the internal day_1 DB column name.
+        # Day columns mapped to their sheet labels
         day_col_indices = {
-            d: ensure_column(score_sheet, header_row, day_sheet_label(d)) for d in DAY_COLUMNS
+            d: ensure_column(score_sheet, header_row, day_sheet_label(d)) 
+            for d in DAY_COLUMNS if d
         }
 
         records = score_sheet.get_all_records()
         existing_map = {str(rec.get(TEAM_COLUMN)): idx + 2 for idx, rec in enumerate(records)}
 
         updates = []
+        new_rows_to_append = []
+
         for t in teams:
             team_name = t["team"]
             row_idx = existing_map.get(team_name)
 
+            # Collect missing teams for a single bulk append
             if not row_idx:
-                score_sheet.append_row([team_name])
-                row_idx = len(existing_map) + 2
+                row_idx = len(records) + 2 + len(new_rows_to_append)
                 existing_map[team_name] = row_idx
+                new_rows_to_append.append([team_name])
+
+            if leader_col_idx and t.get("leader"):
+                updates.append({
+                    "range": gspread.utils.rowcol_to_a1(row_idx, leader_col_idx),
+                    "values": [[t.get("leader", "")]]
+                })
 
             if points_col_idx:
                 updates.append({
                     "range": gspread.utils.rowcol_to_a1(row_idx, points_col_idx),
                     "values": [[t.get("points", 0)]]
                 })
+
             for d_col, col_idx in day_col_indices.items():
                 updates.append({
                     "range": gspread.utils.rowcol_to_a1(row_idx, col_idx),
                     "values": [[t.get(d_col, 0)]]
                 })
 
+        # Bulk append new teams if any were missing from the sheet
+        if new_rows_to_append:
+            score_sheet.append_rows(new_rows_to_append)
+
+        # Batch update all cell values at once
         if updates:
             score_sheet.batch_update(updates)
 
-    # Append unsynced logs to LOGS_WORKSHEET
+    # 2. Append unsynced logs to LOGS_WORKSHEET & update DB in a single batch query
     unsynced_logs = db.execute("SELECT * FROM logs WHERE synced = 0 ORDER BY id ASC")
     if unsynced_logs:
         logs_sheet = client.worksheet(LOGS_WORKSHEET)
         rows = [[log["timestamp"], log["team"], log["change_val"], log["day_col"]] for log in unsynced_logs]
+        
         logs_sheet.append_rows(rows)
 
-        for log in unsynced_logs:
-            db.execute("UPDATE logs SET synced = 1 WHERE id = ?", (log["id"],))
+        # Single batch query to mark logs as synced
+        log_ids = [log["id"] for log in unsynced_logs]
+        placeholders = ",".join(["?"] * len(log_ids))
+        db.execute(f"UPDATE logs SET synced = 1 WHERE id IN ({placeholders})", tuple(log_ids))
 
     return {
         "status": "success",
@@ -380,6 +436,24 @@ async def manual_sync_to_sheets():
     except Exception as e:
         logger.error(f"Manual sync failed: {e}")
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+@app.post("/api/update-team", dependencies=[Depends(verify_session)])
+async def update_team(
+    old_team: str = Form(...),
+    new_team: str = Form(...),
+    leader: str = Form(...)
+):
+    db.execute(
+        "UPDATE teams SET team = ?, leader = ? WHERE team = ?",
+        (new_team.strip(), leader.strip(), old_team)
+    )
+    # Also update existing logs if team name changed
+    if old_team != new_team.strip():
+        db.execute(
+            "UPDATE logs SET team = ? WHERE team = ?",
+            (new_team.strip(), old_team)
+        )
+    return {"status": "success", "team": new_team.strip(), "leader": leader.strip()}
 
 @app.get("/")
 async def serve_index():

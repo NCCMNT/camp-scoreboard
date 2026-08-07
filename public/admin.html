@@ -17,13 +17,46 @@
             gap: 0.9rem;
         }
 
-        .team-title {
+        .team-title-input {
             font-size: clamp(1.15rem, 2.5vw, 1.65rem);
             font-weight: 800;
             text-align: left;
             letter-spacing: -0.02em;
             line-height: 1.1;
             text-transform: uppercase;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text);
+            border-radius: 6px;
+            padding: 0.15rem 0.3rem;
+            width: 100%;
+            font-family: inherit;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+
+        .team-title-input:hover, .team-title-input:focus {
+            border-color: var(--border);
+            background-color: var(--bg-main);
+        }
+
+        .leader-title-input {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+            text-align: left;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 0.15rem 0.3rem;
+            width: 100%;
+            font-family: inherit;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+
+        .leader-title-input:hover, .leader-title-input:focus {
+            border-color: var(--border);
+            background-color: var(--bg-main);
+            color: var(--text);
         }
 
         .control-tile {
@@ -268,7 +301,6 @@
             mask-size: contain;
         }
 
-        /* Quietest action — signing out */
         .bottom-actions .logout-button {
             background: transparent;
             color: var(--muted);
@@ -291,7 +323,6 @@
             transform: scale(0.98);
         }
 
-        /* Secondary action — pushes local state to Google Sheets on demand */
         .bottom-actions .sync-button {
             background: transparent;
             color: var(--accent);
@@ -312,7 +343,6 @@
             transform: scale(0.98);
         }
 
-        /* Secondary action — steps outside today without leaving it */
         .bottom-actions .reopen-trigger-button {
             background: transparent;
             color: var(--accent);
@@ -333,7 +363,6 @@
             transform: scale(0.98);
         }
 
-        /* Primary action — the one thing that should draw the eye */
         .bottom-actions .snapshot-button {
             background-color: #b65624;
             color: #ffffff;
@@ -446,6 +475,24 @@
             transform: scale(0.98);
         }
 
+        .reset-danger-button {
+            width: 100%;
+            height: 2.8rem;
+            background-color: transparent;
+            color: #e53e3e;
+            border: 1px solid #811d1d;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+
+        .reset-danger-button:hover {
+            background-color: rgba(229, 62, 62, 0.1);
+            border-color: #e53e3e;
+        }
+
         .modal-select-dropdown {
             width: 100%;
             padding: 0.75rem;
@@ -543,19 +590,26 @@
         </div>
     </div>
 
-    <!-- Themed Day Picker Modal (view/edit a past day without changing the active day) -->
+    <!-- Themed Day Picker & Reset Modal -->
     <div id="reopen-modal" class="modal-overlay">
         <div class="modal-card" data-testid="stForm">
-            <h3>Edit a Day</h3>
-            <p class="modal-message">Pick a day to add or fix points for. Today's active day stays the same for everyone else no matter what you pick here.</p>
+            <h3>Edit Day & Options</h3>
+            <p class="modal-message">Pick a day to modify scores, or perform a full database reset & Google Sheets sync below.</p>
             
             <select id="day-select-dropdown" class="modal-select-dropdown">
                 <!-- Dynamically loaded -->
             </select>
 
-            <div class="modal-actions">
+            <div class="modal-actions" style="margin-bottom: 1rem;">
                 <button type="button" class="modal-cancel-button" onclick="closeReopenModal()">Cancel</button>
                 <button type="button" class="modal-confirm-button" onclick="submitReopenDay()">Edit this day</button>
+            </div>
+
+            <!-- RESET OPTION INSIDE EDIT DAY MODAL -->
+            <div style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem;">
+                <button type="button" class="reset-danger-button" onclick="handleResetAndSync()">
+                    🔄 Reset DB & Sync from Sheets
+                </button>
             </div>
         </div>
     </div>
@@ -578,9 +632,6 @@
             toastTimeout = setTimeout(() => toast.classList.remove('is-visible'), duration);
         }
 
-        // FastAPI validation errors return detail as a LIST of {msg, loc, ...}
-        // objects rather than a plain string — stringifying that directly
-        // gives "[object Object]". This normalizes any shape to readable text.
         function formatErrorDetail(detail, fallback) {
             if (!detail) return fallback;
             if (typeof detail === 'string') return detail;
@@ -609,11 +660,6 @@
         let summaryColumn = null;
         let currentDayColumn = null;
         let currentDayIndex = null;
-
-        // null = viewing/editing the active day (today). Otherwise, the
-        // column key of a past day the counselor picked via "Edit day".
-        // This is purely a local UI selection — it never touches server
-        // state, so it can't shift the active day for other counselors.
         let editingDayColumn = null;
 
         async function fetchConfig() {
@@ -688,8 +734,6 @@
 
             const dayIsActive = currentDayIndex && currentDayIndex <= dayColumns.length;
             if (editingDayColumn) {
-                // Finishing "today" while looking at a past day would be
-                // confusing, so require going back to today first.
                 btn.textContent = 'Back to today to finish';
                 btn.disabled = true;
                 return;
@@ -747,7 +791,6 @@
             document.getElementById('emblem-file-input').click();
         }
 
-        // Setup the image crop-and-upload flow
         document.getElementById('emblem-file-input').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file || !activeUploadKey) return;
@@ -857,24 +900,25 @@
             const container = document.getElementById('counselor-rows');
             container.innerHTML = '';
 
-            data.forEach((row, index) => {
+            data.forEach((row) => {
                 const teamName = getTeamName(row);
                 const todayPoints = getTodayPoints(row);
                 const overallPoints = getOverallPoints(row);
                 const cleanKey = getCleanKey(teamName);
                 const leaderName = getLeader(row);
                 teamLookup[cleanKey] = teamName;
+
                 container.innerHTML += `
                     <div data-testid="stForm" class="control-tile" id="tile-${cleanKey}">
-                        <!-- Clickable emblem configured in top right corner -->
                         <div class="team-emblem" onclick="triggerUpload('${cleanKey}')" title="Click to upload team emblem">
                             <img src="emblems/${cleanKey}.png?t=${Date.now()}" alt="" onerror="this.style.display='none'">
                             <span class="emblem-fallback">${teamName.charAt(0).toUpperCase()}</span>
                         </div>
 
+                        <!-- EDITABLE TEAM TITLE AND LEADER NAME -->
                         <div class="team-header">
-                            <div class="team-title">${teamName}</div>
-                            <div style="color: var(--muted); font-size: 0.9rem; margin-top: 0.2rem; text-align: left;">${leaderName}</div>
+                            <input type="text" class="team-title-input" id="title-input-${cleanKey}" value="${teamName}" onblur="saveTeamDetails('${cleanKey}')" title="Click to edit team name">
+                            <input type="text" class="leader-title-input" id="leader-input-${cleanKey}" value="${leaderName}" onblur="saveTeamDetails('${cleanKey}')" title="Click to edit leader name" placeholder="Leader Name">
                         </div>
 
                         <div class="control-meta">
@@ -897,6 +941,40 @@
 
             if (!refreshTimer) {
                 refreshTimer = setInterval(refreshCounselorPoints, 10000);
+            }
+        }
+
+        async function saveTeamDetails(cleanKey) {
+            const oldTeamName = teamLookup[cleanKey];
+            const newTeamName = document.getElementById(`title-input-${cleanKey}`).value.trim();
+            const newLeaderName = document.getElementById(`leader-input-${cleanKey}`).value.trim();
+
+            if (!newTeamName) {
+                showToast('Team name cannot be empty', { type: 'error' });
+                document.getElementById(`title-input-${cleanKey}`).value = oldTeamName;
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('old_team', oldTeamName);
+                formData.append('new_team', newTeamName);
+                formData.append('leader', newLeaderName);
+
+                const res = await fetch('/api/update-team', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                if (res.ok) {
+                    teamLookup[cleanKey] = newTeamName;
+                    showToast('Team info updated');
+                } else {
+                    showToast('Failed to update team info', { type: 'error' });
+                }
+            } catch (err) {
+                showToast('Network error while updating team info', { type: 'error' });
             }
         }
 
@@ -962,6 +1040,35 @@
                 overlay.addEventListener('click', onOverlayClick);
                 document.addEventListener('keydown', onKeydown);
             });
+        }
+
+        async function handleResetAndSync() {
+            closeReopenModal();
+            const confirmed = await showConfirmModal(
+                'This will erase all recorded daily scores, reset the current day to Day 1, and re-import team names and leaders directly from Google Sheets. Are you sure?',
+                { title: 'Full Reset & Sync', confirmLabel: 'Reset Everything' }
+            );
+
+            if (!confirmed) return;
+
+            showToast('Resetting database and fetching sheets...');
+            try {
+                const res = await fetch('/api/reset-and-sync', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+
+                if (res.ok) {
+                    showToast('Database reset and teams imported!');
+                    editingDayColumn = null;
+                    await loadCounselorPanel();
+                } else {
+                    const data = await res.json().catch(() => null);
+                    showToast(formatErrorDetail(data?.detail, 'Reset failed'), { type: 'error' });
+                }
+            } catch (err) {
+                showToast('Network error during reset', { type: 'error' });
+            }
         }
 
         async function captureSnapshot() {
@@ -1074,10 +1181,6 @@
             document.getElementById('reopen-modal').classList.remove('is-open');
         }
 
-        // Selecting a day here is purely a local view/edit choice — it never
-        // calls the server or changes which day is active for anyone else.
-        // Score changes made while a past day is selected are sent with an
-        // explicit `day` param on /api/update-score.
         function submitReopenDay() {
             const target = document.getElementById('day-select-dropdown').value;
             if (!target) {
