@@ -20,13 +20,32 @@
             font-family: 'Constantine', system-ui, sans-serif !important;
         }
 
+        :root {
+            --bg-image-url: url('bg.jpg');
+            --bg-image-opacity: 0.12;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: var(--bg-image-url);
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            opacity: var(--bg-image-opacity);
+            z-index: 0;
+            pointer-events: none;
+            filter: saturate(0.95) contrast(0.98);
+        }
+
         .controls-list {
             display: grid;
             gap: 0.9rem;
         }
 
         .team-title-input {
-            font-size: clamp(1.15rem, 2.5vw, 1.65rem);
+            font-size: clamp(1.25rem, 2.6vw, 1.85rem);
             font-weight: 800;
             text-align: left;
             letter-spacing: -0.02em;
@@ -48,8 +67,8 @@
 
         .leader-title-input {
             color: var(--muted);
-            font-size: 0.9rem;
-            margin-top: 0.2rem;
+            font-size: 1rem;
+            margin-top: 0.18rem;
             text-align: left;
             background: transparent;
             border: 1px solid transparent;
@@ -75,6 +94,19 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             background: linear-gradient(160deg, var(--bg-card), var(--bg-main));
+        }
+
+        .block-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .control-tile.podium-1 {
+            border-color: var(--first);
+        }
+
+        .control-tile.podium-2 {
+            border-color: var(--second);
         }
 
         .team-emblem {
@@ -1048,6 +1080,8 @@
             const container = document.getElementById('counselor-rows');
             container.innerHTML = '';
 
+            const ranking = [...data].sort((a,b) => getOverallPoints(b) - getOverallPoints(a)).map(r => getTeamName(r));
+
             data.forEach((row) => {
                 const teamName = getTeamName(row);
                 const todayPoints = getTodayPoints(row);
@@ -1055,9 +1089,13 @@
                 const cleanKey = getCleanKey(teamName);
                 const leaderName = getLeader(row);
                 teamLookup[cleanKey] = teamName;
+                const rankIndex = ranking.indexOf(teamName);
+                let podiumClass = '';
+                if (rankIndex === 0) podiumClass = 'podium-1';
+                else if (rankIndex === 1) podiumClass = 'podium-2';
 
                 container.innerHTML += `
-                    <div data-testid="stForm" class="control-tile" id="tile-${cleanKey}">
+                    <div data-testid="stForm" class="control-tile ${podiumClass}" id="tile-${cleanKey}">
                         <div class="team-emblem" onclick="triggerUpload('${cleanKey}')" title="Click to upload team emblem">
                             <img src="emblems/${cleanKey}.png?t=${Date.now()}" alt="" onerror="this.style.display='none'">
                             <span class="emblem-fallback">${teamName.charAt(0).toUpperCase()}</span>
@@ -1284,7 +1322,7 @@
                 }
 
                 if (res.ok) {
-                    button.textContent = 'Synced ✓';
+                    button.textContent = 'Synced';
                 } else {
                     button.textContent = formatErrorDetail(data?.detail, 'Sync failed').slice(0, 30);
                 }
