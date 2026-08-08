@@ -8,6 +8,8 @@
     --accent: var(--rank-others-color, #c57a2b);
     --accent-dim: #8f5a2a;       /* Dimmer variant for secondary buttons */
     --apply-highlight: var(--rank1-color, #e0a6c7); /* pinkish highlight for Apply */
+    --apply-flat: #e0a6c7;       /* flat pink for Apply and primary admin buttons */
+    --change-flat: #a88558;      /* flat color for + / - change buttons */
     --first: #e9c244;
     --second: #c9cdd1;
     --accent-glow: rgba(0, 0, 0, 0.08);

@@ -250,19 +250,33 @@
             flex-shrink: 0;
         }
 
-        .apply-button {
-            height: 3rem;
-            padding-inline: 1.25rem;
-            font-size: 1rem;
-            background: linear-gradient(90deg, var(--apply-highlight), var(--accent));
+        .change-button {
+            background-color: var(--change-flat);
             color: #ffffff;
-            flex-grow: 1;
+            border: none;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
             transition: filter 0.12s, transform 0.08s;
         }
 
+        .apply-button {
+            height: 3rem;
+            padding-inline: 1.25rem;
+            font-size: 1rem;
+            background-color: var(--apply-flat);
+            color: var(--bg-main);
+            flex-grow: 1;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            transition: filter 0.12s, transform 0.08s;
+        }
+
         .apply-button:hover:not(:disabled) {
-            filter: brightness(1.04);
+            filter: brightness(1.06);
         }
 
         .apply-button:active:not(:disabled) {
@@ -381,9 +395,9 @@
         }
 
         .bottom-actions .sync-button {
-            background: transparent;
-            color: var(--accent-dim);
-            border: 1.5px solid var(--accent-dim);
+            background-color: var(--apply-flat);
+            color: var(--bg-main);
+            border: none;
         }
 
         .bottom-actions .sync-button::before {
@@ -392,18 +406,17 @@
         }
 
         .bottom-actions .sync-button:hover:not(:disabled) {
-            background-color: rgba(197,122,43,0.08);
+            filter: brightness(1.02);
         }
 
         .bottom-actions .sync-button:active:not(:disabled) {
-            background-color: rgba(197,122,43,0.08);
-            transform: scale(0.98);
+            transform: scale(0.99);
         }
 
         .bottom-actions .reopen-trigger-button {
-            background: transparent;
-            color: var(--accent-dim);
-            border: 1.5px solid var(--accent-dim);
+            background-color: var(--apply-flat);
+            color: var(--bg-main);
+            border: none;
         }
 
         .bottom-actions .reopen-trigger-button::before {
@@ -412,19 +425,18 @@
         }
 
         .bottom-actions .reopen-trigger-button:hover:not(:disabled) {
-            background-color: rgba(197,122,43,0.08);
+            filter: brightness(1.02);
         }
 
         .bottom-actions .reopen-trigger-button:active:not(:disabled) {
-            background-color: rgba(197,122,43,0.08);
-            transform: scale(0.98);
+            transform: scale(0.99);
         }
 
         .bottom-actions .snapshot-button {
-            background-color: var(--accent-dim);
-            color: #ffffff;
+            background-color: var(--apply-flat);
+            color: var(--bg-main);
             border: none;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
 
         .bottom-actions .snapshot-button::before {
