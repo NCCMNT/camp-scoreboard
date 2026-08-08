@@ -400,34 +400,41 @@
         }
 
         let dayColumns = [];
+        let currentDayIndex = null;
 
-        async function fetchDayColumns() {
+        async function fetchDayConfig() {
             try {
                 const res = await fetch('/api/day-columns');
-                if (!res.ok) return [];
+                if (!res.ok) return { days: [], currentDayIndex: null };
                 const data = await res.json();
-                return Array.isArray(data.days) ? data.days : [];
+                return {
+                    days: Array.isArray(data.days) ? data.days : [],
+                    currentDayIndex: data.currentDayIndex ?? null
+                };
             } catch (error) {
-                return [];
+                return { days: [], currentDayIndex: null };
             }
         }
 
         function computePastRanks(data) {
-            let chosenCol = null;
-            for (let i = dayColumns.length - 1; i >= 0; i--) {
-                const col = dayColumns[i];
-                const allFilled = data.every(row => {
-                    const raw = row[col];
-                    return raw !== undefined && raw !== null && String(raw).trim() !== '' && Number.isFinite(Number(raw));
-                });
-                if (allFilled) {
-                    chosenCol = col;
-                    break;
-                }
-            }
-            if (!chosenCol) return null;
+            if (!dayColumns.length) return null;
 
-            const ranked = [...data].sort((a, b) => Number(b[chosenCol]) - Number(a[chosenCol]));
+            let compareCol = null;
+            if (currentDayIndex && currentDayIndex >= 2) {
+                compareCol = dayColumns[currentDayIndex - 2]; // day before today
+            } else if (!currentDayIndex && dayColumns.length >= 2) {
+                // All days captured - compare final standings to the day before the last one
+                compareCol = dayColumns[dayColumns.length - 2];
+            }
+
+            if (!compareCol) return null; // day 1, no prior day to compare against yet
+
+            const scoreOf = (row) => {
+                const v = Number(row[compareCol]);
+                return Number.isFinite(v) ? v : 0; // missing/blank cells count as 0, not disqualifying
+            };
+
+            const ranked = [...data].sort((a, b) => scoreOf(b) - scoreOf(a));
             const rankMap = new Map();
             ranked.forEach((row, idx) => rankMap.set(getTeamName(row), idx + 1));
             return rankMap;
@@ -454,11 +461,12 @@
         }
 
         async function fetchLeaderboard() {
-            const [scoresRes, days] = await Promise.all([
+            const [scoresRes, config] = await Promise.all([
                 fetch('/api/scores'),
-                dayColumns.length ? Promise.resolve(dayColumns) : fetchDayColumns()
+                fetchDayConfig()
             ]);
-            dayColumns = days;
+            dayColumns = config.days;
+            currentDayIndex = config.currentDayIndex;
 
             const data = await scoresRes.json();
 
@@ -508,7 +516,7 @@
                     el.style.opacity = '0';
                     el.style.transform = 'translateY(-12px)';
                     void el.offsetHeight; // force reflow
-                    el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                    el.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
                     el.style.opacity = '';
                     el.style.transform = '';
                 }
@@ -531,7 +539,7 @@
                 el.style.transition = 'none';
                 el.style.transform = `translateY(${deltaY}px)`;
                 void el.offsetHeight; // force reflow so the browser commits the "Invert" position
-                el.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+                el.style.transition = 'transform 1.4s cubic-bezier(0.22, 1, 0.36, 1)';
                 el.style.transform = '';
             });
         }
