@@ -163,9 +163,10 @@
             text-align: center;
             padding: 1.25rem;
             font-weight: 800;
-            color: var(--muted);
-            background: linear-gradient(160deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-            border: 1px dashed rgba(255,255,255,0.04);
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: linear-gradient(160deg, var(--bg-card), var(--bg-main));
         }
 
         .block-container {
@@ -395,7 +396,7 @@
             width: 100%;
             background-color: var(--bg-card);
             border-top: 1px solid var(--border);
-            border-radius: 12px 12px 0 0;
+            border-radius: 12px;
             box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
             z-index: 50;
         }
