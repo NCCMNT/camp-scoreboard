@@ -1828,50 +1828,78 @@
                         }
                     }
                     setChangeValue(cleanKey, 0);
-                    // compute rank change for this team and show arrow
+                    // compute rank changes for all teams and show arrows
                     try {
-                        const teamNameLocal = teamName;
-                        // update local points map
+                        // build previous ranking snapshot
+                        const prevRanking = Array.isArray(window.currentRanking) ? [...window.currentRanking] : [];
+
+                        // update local cached points for the updated team
                         if (!window.teamPointsMap) window.teamPointsMap = {};
-                        window.teamPointsMap[teamNameLocal] = data.new_summary;
+                        window.teamPointsMap[teamName] = data.new_summary;
 
-                        const oldRanking = window.currentRanking || [];
-                        const newRanking = Object.keys(window.teamPointsMap).sort((a,b) => (window.teamPointsMap[b] || 0) - (window.teamPointsMap[a] || 0));
+                        // build new ranking by reading all tiles' overall points from DOM (most reliable)
+                        const tiles = Array.from(document.querySelectorAll('[id^="tile-"]'));
+                        const newPointsMap = {};
+                        const newRanking = [];
+                        tiles.forEach(tile => {
+                            const id = tile.id.replace('tile-','');
+                            const titleInput = document.getElementById(`title-input-${id}`);
+                            const overallEl = document.getElementById(`overall-${id}`);
+                            const teamLabel = titleInput ? titleInput.value.trim() : (teamLookup[id] || id);
+                            let pts = 0;
+                            if (overallEl) {
+                                // first child is numeric text node for points
+                                const first = overallEl.childNodes && overallEl.childNodes[0] ? overallEl.childNodes[0].textContent : overallEl.textContent;
+                                pts = parseInt(String(first || '').trim().replace(/[^0-9-]/g, ''), 10) || 0;
+                            }
+                            newPointsMap[teamLabel] = pts;
+                            newRanking.push(teamLabel);
+                        });
 
-                        // determine movement for this team
-                        const prevIdx = oldRanking.indexOf(teamNameLocal);
-                        const newIdx = newRanking.indexOf(teamNameLocal);
-                        const cleanKeyLocal = cleanKey;
-                        const arrowEl = document.getElementById(`rank-${cleanKeyLocal}`);
-                        if (arrowEl) {
-                            // force reflow to make CSS transitions trigger predictably
+                        // sort newRanking by points descending using newPointsMap
+                        newRanking.sort((a,b) => (newPointsMap[b] || 0) - (newPointsMap[a] || 0));
+
+                        // detect movements for all teams
+                        const allTeams = new Set([...prevRanking, ...newRanking]);
+                        allTeams.forEach(tn => {
+                            const prevIdx = prevRanking.indexOf(tn);
+                            const newIdx = newRanking.indexOf(tn);
+                            if (prevIdx === -1 && newIdx === -1) return; // unknown team
+
+                            const cleanKeyForTeam = Object.keys(teamLookup).find(k => teamLookup[k] === tn) || null;
+                            if (!cleanKeyForTeam) return;
+                            const arrowEl = document.getElementById(`rank-${cleanKeyForTeam}`);
+                            const tileEl = document.getElementById(`tile-${cleanKeyForTeam}`);
+                            if (!arrowEl) return;
+
+                            // force reflow to ensure transition
                             void arrowEl.offsetWidth;
                             arrowEl.classList.remove('rank-up','rank-down');
-                            const tileEl = document.getElementById(`tile-${cleanKeyLocal}`);
-                            if (prevIdx >=0 && newIdx >= 0 && newIdx < prevIdx) {
+                            if (prevIdx >= 0 && newIdx >= 0 && newIdx < prevIdx) {
                                 arrowEl.textContent = '▲';
                                 arrowEl.classList.add('rank-up');
                                 if (tileEl) tileEl.classList.add('rank-move-up');
-                            } else if (prevIdx >=0 && newIdx >=0 && newIdx > prevIdx) {
+                            } else if (prevIdx >= 0 && newIdx >= 0 && newIdx > prevIdx) {
                                 arrowEl.textContent = '▼';
                                 arrowEl.classList.add('rank-down');
                                 if (tileEl) tileEl.classList.add('rank-move-down');
                             } else {
                                 arrowEl.textContent = '';
                             }
-                            // clear arrow and move classes after a few seconds
-                            setTimeout(() => {
-                                try { 
-                                    arrowEl.classList.remove('rank-up','rank-down'); 
-                                    arrowEl.textContent = ''; 
-                                    if (tileEl) tileEl.classList.remove('rank-move-up','rank-move-down');
-                                } catch(e){}
-                            }, 7000);
-                        }
 
-                        // update stored ranking
-                        window.prevRanking = oldRanking;
+                            setTimeout(() => {
+                                try {
+                                    arrowEl.classList.remove('rank-up','rank-down');
+                                    arrowEl.textContent = '';
+                                    if (tileEl) tileEl.classList.remove('rank-move-up','rank-move-down');
+                                } catch (e) {}
+                            }, 7000);
+                        });
+
+                        // persist new ranking and points map
+                        window.prevRanking = prevRanking;
                         window.currentRanking = newRanking;
+                        window.teamPointsMap = newPointsMap;
                     } catch (e) { /* ignore arrow errors */ }
                 } else {
                     showToast(formatErrorDetail(data?.detail, 'Session expired or error saving update.'), { type: 'error' });
