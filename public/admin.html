@@ -330,7 +330,7 @@
 
         .bottom-actions-grid {
             display: grid;
-            grid-template-columns: 0.9fr 1fr 1.3fr 1.5fr;
+            grid-template-columns: 0.8fr 0.9fr 0.9fr 1.1fr 1.4fr;
             gap: 0.5rem;
             width: 100%;
             transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
@@ -410,6 +410,25 @@
         }
 
         .bottom-actions .sync-button:active:not(:disabled) {
+            transform: scale(0.99);
+        }
+
+        .bottom-actions .logs-trigger-button {
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
+        }
+
+        .bottom-actions .logs-trigger-button::before {
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='8' y1='6' x2='21' y2='6'/%3E%3Cline x1='8' y1='12' x2='21' y2='12'/%3E%3Cline x1='8' y1='18' x2='21' y2='18'/%3E%3Cline x1='3' y1='6' x2='3.01' y2='6'/%3E%3Cline x1='3' y1='12' x2='3.01' y2='12'/%3E%3Cline x1='3' y1='18' x2='3.01' y2='18'/%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='8' y1='6' x2='21' y2='6'/%3E%3Cline x1='8' y1='12' x2='21' y2='12'/%3E%3Cline x1='8' y1='18' x2='21' y2='18'/%3E%3Cline x1='3' y1='6' x2='3.01' y2='6'/%3E%3Cline x1='3' y1='12' x2='3.01' y2='12'/%3E%3Cline x1='3' y1='18' x2='3.01' y2='18'/%3E%3C/svg%3E");
+        }
+
+        .bottom-actions .logs-trigger-button:hover:not(:disabled) {
+            background-color: rgba(255,255,255,0.03);
+        }
+
+        .bottom-actions .logs-trigger-button:active:not(:disabled) {
             transform: scale(0.99);
         }
 
@@ -495,7 +514,7 @@
             }
 
             .bottom-actions-grid {
-                grid-template-columns: 0.8fr 1.1fr 1.1fr;
+                grid-template-columns: 0.7fr 0.8fr 0.9fr 0.9fr;
                 gap: 0.55rem;
                 max-height: 260px;
                 opacity: 1;
@@ -650,6 +669,58 @@
             border-color: var(--accent-dim);
         }
 
+        .logs-modal-card {
+            max-width: 460px;
+        }
+
+        .logs-list {
+            max-height: 55vh;
+            overflow-y: auto;
+            display: grid;
+            gap: 0.6rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .log-entry {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            background-color: var(--bg-main);
+        }
+
+        .log-entry-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        .log-team {
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .log-change {
+            font-size: 0.95rem;
+        }
+
+        .log-positive {
+            color: #4ade80;
+        }
+
+        .log-negative {
+            color: #e53e3e;
+        }
+
+        .log-entry-meta {
+            margin-top: 0.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
         .toast {
             position: fixed;
             left: 50%;
@@ -692,7 +763,8 @@
         <!-- Auth View Container -->
         <div id="login-section" data-testid="stForm" style="max-width: 450px; margin: 4rem auto; display: block;">
             <h2>Counselor Access</h2>
-            <p style="color: var(--muted);">Enter the PIN to unlock score updates.</p>
+            <p style="color: var(--muted);">Enter your name and the PIN to unlock score updates.</p>
+            <input type="text" id="counselor-name-input" placeholder="Your name" style="width: 100%; margin: 1rem 0 0; padding: 0.7rem;">
             <input type="password" id="pin-input" placeholder="Enter PIN" style="width: 100%; margin: 1rem 0; padding: 0.7rem;">
             <button onclick="handleLogin()" style="width: 100%;">Login</button>
         </div>
@@ -711,6 +783,7 @@
             <div class="bottom-actions" id="bottom-actions">
                 <div class="bottom-actions-grid" id="bottom-actions-grid">
                     <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
+                    <button type="button" id="logs-trigger-button" class="logs-trigger-button" onclick="openLogsModal()">Logs</button>
                     <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
                     <button type="button" id="sync-button" class="sync-button" onclick="syncToSheets()">Sync</button>
                     <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
@@ -755,12 +828,25 @@
         </div>
     </div>
 
+    <!-- Recent Logs Modal -->
+    <div id="logs-modal" class="modal-overlay">
+        <div class="modal-card logs-modal-card" data-testid="stForm">
+            <h3>Recent Logs</h3>
+            <p class="modal-message">Latest point changes, most recent first.</p>
+            <div id="logs-list" class="logs-list"></div>
+            <div class="modal-actions" style="margin-top: 1rem;">
+                <button type="button" class="modal-cancel-button" onclick="closeLogsModal()" style="flex:1;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <input type="file" id="emblem-file-input" accept="image/*" style="display: none;">
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script>
         const teamLookup = {};
         let activeUploadKey = null;
+        let counselorName = '';
 
         let toastTimeout = null;
         function showToast(message, { type = 'info', duration = 2800 } = {}) {
@@ -1051,6 +1137,7 @@
 
         async function handleLogin() {
             const pin = document.getElementById('pin-input').value;
+            counselorName = (document.getElementById('counselor-name-input').value || '').trim();
             const formData = new FormData();
             formData.append('pin', pin);
 
@@ -1386,6 +1473,61 @@
             document.getElementById('reopen-modal').classList.remove('is-open');
         }
 
+        async function openLogsModal() {
+            const modal = document.getElementById('logs-modal');
+            const list = document.getElementById('logs-list');
+            list.innerHTML = '<p style="color: var(--muted); text-align:center;">Loading…</p>';
+            modal.classList.add('is-open');
+
+            try {
+                const res = await fetch('/api/logs?limit=50', { credentials: 'same-origin' });
+                if (!res.ok) throw new Error('Failed to load logs');
+                const data = await res.json();
+                renderLogs(data.logs || []);
+            } catch (err) {
+                list.innerHTML = '<p style="color: var(--muted); text-align:center;">Could not load logs.</p>';
+            }
+        }
+
+        function closeLogsModal() {
+            document.getElementById('logs-modal').classList.remove('is-open');
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str ?? '';
+            return div.innerHTML;
+        }
+
+        function renderLogs(logs) {
+            const list = document.getElementById('logs-list');
+            if (!logs.length) {
+                list.innerHTML = '<p style="color: var(--muted); text-align:center;">No logs yet.</p>';
+                return;
+            }
+            list.innerHTML = logs.map(log => {
+                const sign = log.change_val > 0 ? '+' : '';
+                const changeClass = log.change_val > 0 ? 'log-positive' : 'log-negative';
+                const dayLabel = (log.day_col || '').replace(/_/g, ' ');
+                const who = log.counselor ? escapeHtml(log.counselor) : 'Unknown';
+                return `
+                    <div class="log-entry">
+                        <div class="log-entry-main">
+                            <span class="log-team">${escapeHtml(log.team)}</span>
+                            <span class="log-change ${changeClass}">${sign}${log.change_val}</span>
+                        </div>
+                        <div class="log-entry-meta">
+                            <span>${escapeHtml(log.timestamp)}</span>
+                            <span>·</span>
+                            <span>${escapeHtml(dayLabel)}</span>
+                            <span>·</span>
+                            <span>${who}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         function submitReopenDay() {
             const target = document.getElementById('day-select-dropdown').value;
             if (!target) {
@@ -1423,6 +1565,7 @@
                 const formData = new FormData();
                 formData.append('team', teamName);
                 formData.append('change', val);
+                if (counselorName) formData.append('counselor', counselorName);
                 const dayToEdit = getEffectiveDayColumn();
                 if (dayToEdit) formData.append('day', dayToEdit);
 

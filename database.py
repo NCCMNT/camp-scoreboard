@@ -165,6 +165,7 @@ class DatabaseManager:
                 synced INTEGER DEFAULT 0
             )
         """)
+        self.ensure_columns("logs", {"counselor": "TEXT"})
 
 
 db = DatabaseManager()

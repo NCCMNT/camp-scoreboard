@@ -260,7 +260,8 @@ async def day_columns():
 async def update_score(
     team: str = Form(...),
     change: int = Form(...),
-    day: str = Form(None)
+    day: str = Form(None),
+    counselor: str = Form(None)
 ):
     if change == 0:
         raise HTTPException(status_code=400, detail="Change must be non-zero")
@@ -298,9 +299,10 @@ async def update_score(
         )
 
     # Log change locally
+    counselor_name = (counselor or "").strip()[:60] or None
     db.execute(
-        "INSERT INTO logs (timestamp, team, change_val, day_col, synced) VALUES (?, ?, ?, ?, 0)",
-        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), team, change, target_day_col)
+        "INSERT INTO logs (timestamp, team, change_val, day_col, counselor, synced) VALUES (?, ?, ?, ?, ?, 0)",
+        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), team, change, target_day_col, counselor_name)
     )
 
     updated_team = db.execute("SELECT * FROM teams WHERE team = ?", (team,))[0]
@@ -347,6 +349,17 @@ async def capture_snapshot():
         "column": target_day_col,
         "captured": captured
     }
+
+
+@app.get("/api/logs", dependencies=[Depends(verify_session)])
+async def get_logs(limit: int = 50):
+    """Return the most recent point-change logs for the admin logs popup."""
+    limit = max(1, min(limit, 200))
+    rows = db.execute(
+        "SELECT timestamp, team, change_val, day_col, counselor FROM logs ORDER BY id DESC LIMIT ?",
+        (limit,)
+    )
+    return {"logs": rows}
 
 
 @app.get("/api/all-days", dependencies=[Depends(verify_session)])
@@ -439,7 +452,10 @@ def _perform_sheets_sync() -> dict:
     unsynced_logs = db.execute("SELECT * FROM logs WHERE synced = 0 ORDER BY id ASC")
     if unsynced_logs:
         logs_sheet = client.worksheet(LOGS_WORKSHEET)
-        rows = [[log["timestamp"], log["team"], log["change_val"], log["day_col"]] for log in unsynced_logs]
+        rows = [
+            [log["timestamp"], log["team"], log["change_val"], log["day_col"], log.get("counselor") or ""]
+            for log in unsynced_logs
+        ]
         
         logs_sheet.append_rows(rows)
 
