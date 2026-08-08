@@ -283,36 +283,9 @@
             transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
         }
 
-        .actions-toggle-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: none; /* arrow-only button */
-            border: none;
-            color: var(--muted);
-            cursor: pointer;
-            padding: 0;
-            position: absolute;
-            right: 1rem; /* desktop: sit at the right edge of the panel */
-            top: -18px;
-            z-index: 60;
-            transition: transform 0.12s ease, color 0.12s ease;
-        }
-
-        .actions-toggle-btn:hover {
-            color: var(--text);
-            transform: translateY(-2px);
-        }
-
-        .actions-toggle-svg {
-            width: 18px;
-            height: 18px;
-            display: block;
-            color: currentColor;
-        }
+        /* collapse toggle removed */
+        .actions-toggle-btn { display: none !important; }
+        .actions-toggle-svg { display: none !important; }
 
         .bottom-actions button {
             display: flex;
@@ -480,30 +453,19 @@
                 margin-top: 8px; /* separate grid from the toggle button */
             }
 
-            /* Collapsed State: Makes left and right space fully transparent */
+            /* Collapse feature removed: always show actions */
             .bottom-actions.collapsed {
-                background-color: transparent;
-                border-top-color: transparent;
-                box-shadow: none;
-                padding-top: 0.6rem;
-            }
-
-            .bottom-actions.collapsed .actions-toggle-btn {
-                /* Keep the small arrow button above the panel when collapsed */
-                top: -12px;
-                transform: translateX(-50%) rotate(0deg);
-                box-shadow: none;
-            }
-
-            .bottom-actions.collapsed .actions-toggle-svg {
-                transform: rotate(180deg); /* flip arrow when collapsed */
+                background-color: var(--bg-card);
+                border-top-color: var(--border);
+                box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+                padding-top: 1.1rem;
             }
 
             .bottom-actions.collapsed .bottom-actions-grid {
-                max-height: 0;
-                opacity: 0;
-                margin: 0;
-                pointer-events: none;
+                max-height: 260px;
+                opacity: 1;
+                margin-top: 8px;
+                pointer-events: auto;
             }
 
             .bottom-actions .snapshot-button {
@@ -696,11 +658,6 @@
             <div id="counselor-rows" class="controls-list"></div>
 
             <div class="bottom-actions" id="bottom-actions">
-                <button type="button" class="actions-toggle-btn" onclick="toggleMobileActions()" id="actions-toggle-btn" aria-label="Toggle Quick Actions">
-                    <svg class="actions-toggle-svg" viewBox="0 0 28 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M 2 2 L 14 8 L 26 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
                 <div class="bottom-actions-grid" id="bottom-actions-grid">
                     <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
                     <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
@@ -765,10 +722,7 @@
             toastTimeout = setTimeout(() => toast.classList.remove('is-visible'), duration);
         }
 
-        function toggleMobileActions() {
-            const container = document.getElementById('bottom-actions');
-            container.classList.toggle('collapsed');
-        }
+        /* collapse feature removed: bottom actions always visible */
 
         function formatErrorDetail(detail, fallback) {
             if (!detail) return fallback;
