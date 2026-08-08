@@ -261,27 +261,6 @@ async def day_columns():
     }
 
 
-@app.post("/api/day-title", dependencies=[Depends(verify_session)])
-async def set_day_title(
-    day: str = Form(...),
-    title: str = Form("")
-):
-    """Assign or update the display title for a given day column."""
-    configured_days = configured_day_columns()
-    if day not in configured_days:
-        raise HTTPException(status_code=400, detail="Invalid day column")
-
-    clean_title = title.strip()[:80]
-
-    existing = db.execute("SELECT day_col FROM day_titles WHERE day_col = ?", (day,))
-    if existing:
-        db.execute("UPDATE day_titles SET title = ? WHERE day_col = ?", (clean_title, day))
-    else:
-        db.execute("INSERT INTO day_titles (day_col, title) VALUES (?, ?)", (day, clean_title))
-
-    return {"status": "success", "day": day, "title": clean_title}
-
-
 @app.post("/api/update-score", dependencies=[Depends(verify_session)])
 async def update_score(
     team: str = Form(...),

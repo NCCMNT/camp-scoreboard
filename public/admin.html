@@ -72,6 +72,13 @@
             cursor: not-allowed;
         }
 
+        /* non-interactive display state for read-only day title */
+        .day-title-input.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         .controls-list {
             display: grid;
             gap: 0.9rem;
@@ -789,6 +796,12 @@
         .toast.is-error::before {
             content: '⚠ ';
         }
+
+        body.no-scroll {
+            position: fixed;
+            overflow: hidden;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -806,7 +819,7 @@
         <div id="controls-section" style="display: none;">
             <h2 style="text-align: center;">EXODUS FUNTIME</h2>
             <p id="camp-day-indicator" style="color: var(--muted); text-align: center; margin-top: -0.75rem; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08rem;"></p>
-            <input type="text" id="day-title-input" class="day-title-input" placeholder="Add a title for this day…" maxlength="80" onblur="saveDayTitle()" onkeydown="if (event.key === 'Enter') { this.blur(); }">
+            <div id="day-title-input" class="day-title-input" aria-readonly="true"></div>
             <div id="editing-day-banner" style="display: none; text-align: center; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06rem; color: var(--accent-dim);">
                 <span id="editing-day-label"></span>
                 &nbsp;·&nbsp;
@@ -891,6 +904,30 @@
             toast.classList.add('is-visible');
             clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => toast.classList.remove('is-visible'), duration);
+        }
+
+        // Helpers to lock body scroll when modals are open (prevent background scrolling)
+        function lockBodyScroll() {
+            try {
+                const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+                document.body.dataset.scrollY = String(scrollY);
+                document.body.style.top = `-${scrollY}px`;
+                document.body.classList.add('no-scroll');
+            } catch (e) {
+                document.body.classList.add('no-scroll');
+            }
+        }
+
+        function unlockBodyScroll() {
+            try {
+                const prev = parseInt(document.body.dataset.scrollY || '0', 10) || 0;
+                document.body.classList.remove('no-scroll');
+                document.body.style.top = '';
+                window.scrollTo(0, prev);
+                delete document.body.dataset.scrollY;
+            } catch (e) {
+                document.body.classList.remove('no-scroll');
+            }
         }
 
         /* collapse feature removed: bottom actions always visible */
@@ -1010,45 +1047,12 @@
         }
 
         function updateDayTitleInput() {
-            const input = document.getElementById('day-title-input');
-            if (!input) return;
+            const el = document.getElementById('day-title-input');
+            if (!el) return;
             const col = getEffectiveDayColumn();
-            input.value = col ? (dayTitles[col] || '') : '';
-            input.disabled = !col;
-        }
-
-        async function saveDayTitle() {
-            const input = document.getElementById('day-title-input');
-            if (!input) return;
-            const col = getEffectiveDayColumn();
-            if (!col) return;
-
-            const newTitle = input.value.trim();
-            if ((dayTitles[col] || '') === newTitle) return;
-
-            try {
-                const formData = new FormData();
-                formData.append('day', col);
-                formData.append('title', newTitle);
-
-                const res = await fetch('/api/day-title', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
-                });
-
-                if (res.ok) {
-                    dayTitles[col] = newTitle;
-                    showToast(newTitle ? 'Day title saved' : 'Day title cleared');
-                } else {
-                    const data = await res.json().catch(() => null);
-                    showToast(formatErrorDetail(data?.detail, 'Could not save day title'), { type: 'error' });
-                    input.value = dayTitles[col] || '';
-                }
-            } catch (err) {
-                showToast('Network error saving day title', { type: 'error' });
-                input.value = dayTitles[col] || '';
-            }
+            const title = col ? (dayTitles[col] || '') : '';
+            el.textContent = title;
+            if (!col) el.classList.add('disabled'); else el.classList.remove('disabled');
         }
 
         function getCleanKey(teamName) {
@@ -1399,6 +1403,7 @@
             messageEl.textContent = message;
             confirmBtn.textContent = confirmLabel;
             overlay.classList.add('is-open');
+            lockBodyScroll();
             confirmBtn.focus();
 
             return new Promise((resolve) => {
@@ -1408,6 +1413,7 @@
                     confirmBtn.removeEventListener('click', onConfirm);
                     overlay.removeEventListener('click', onOverlayClick);
                     document.removeEventListener('keydown', onKeydown);
+                    try { unlockBodyScroll(); } catch (e) {}
                     resolve(result);
                 }
                 function onCancel() { cleanup(false); }
@@ -1553,7 +1559,9 @@
                         if (day.column === (editingDayColumn || data.active_day)) option.selected = true;
                         dropdown.appendChild(option);
                     });
-                    document.getElementById('reopen-modal').classList.add('is-open');
+                    const modal = document.getElementById('reopen-modal');
+                    modal.classList.add('is-open');
+                    lockBodyScroll();
                 } else {
                     showToast('No day columns are available to select.', { type: 'error' });
                 }
@@ -1564,6 +1572,7 @@
 
         function closeReopenModal() {
             document.getElementById('reopen-modal').classList.remove('is-open');
+            try { unlockBodyScroll(); } catch (e) {}
         }
 
         async function openLogsModal() {
@@ -1571,6 +1580,7 @@
             const list = document.getElementById('logs-list');
             list.innerHTML = '<p style="color: var(--muted); text-align:center;">Loading…</p>';
             modal.classList.add('is-open');
+            lockBodyScroll();
 
             try {
                 const res = await fetch('/api/logs?limit=50', { credentials: 'same-origin' });
@@ -1584,6 +1594,7 @@
 
         function closeLogsModal() {
             document.getElementById('logs-modal').classList.remove('is-open');
+            try { unlockBodyScroll(); } catch (e) {}
         }
 
         function escapeHtml(str) {
