@@ -7,8 +7,8 @@
     --muted: #a69685;            /* Soft dust / dry brush gray */
     --accent: var(--rank-others-color, #c57a2b);
     --accent-dim: #8f5a2a;       /* Dimmer variant for secondary buttons */
-    --apply-highlight: var(--rank1-color, #e0a6c7); /* pinkish highlight for Apply */
-    --apply-flat: #e0a6c7;       /* flat pink for Apply and primary admin buttons */
+    --apply-highlight: var(--rank1-color, #c57a2b); /* orange highlight for Apply */
+    --apply-flat: #c57a2b;       /* flat orange for Apply and primary admin buttons */
     --change-flat: #a88558;      /* flat color for + / - change buttons */
     --first: #e9c244;
     --second: #c9cdd1;

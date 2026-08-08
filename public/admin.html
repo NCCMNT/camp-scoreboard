@@ -395,9 +395,9 @@
         }
 
         .bottom-actions .sync-button {
-            background-color: var(--apply-flat);
-            color: var(--bg-main);
-            border: none;
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
         }
 
         .bottom-actions .sync-button::before {
@@ -406,7 +406,7 @@
         }
 
         .bottom-actions .sync-button:hover:not(:disabled) {
-            filter: brightness(1.02);
+            background-color: rgba(255,255,255,0.03);
         }
 
         .bottom-actions .sync-button:active:not(:disabled) {
@@ -414,9 +414,9 @@
         }
 
         .bottom-actions .reopen-trigger-button {
-            background-color: var(--apply-flat);
-            color: var(--bg-main);
-            border: none;
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
         }
 
         .bottom-actions .reopen-trigger-button::before {
@@ -425,7 +425,7 @@
         }
 
         .bottom-actions .reopen-trigger-button:hover:not(:disabled) {
-            filter: brightness(1.02);
+            background-color: rgba(255,255,255,0.03);
         }
 
         .bottom-actions .reopen-trigger-button:active:not(:disabled) {
@@ -433,10 +433,10 @@
         }
 
         .bottom-actions .snapshot-button {
-            background-color: var(--apply-flat);
-            color: var(--bg-main);
+            background-color: var(--accent);
+            color: #ffffff;
             border: none;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
         }
 
         .bottom-actions .snapshot-button::before {
