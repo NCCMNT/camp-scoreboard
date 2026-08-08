@@ -72,6 +72,7 @@
             gap: 1.25rem;
             min-height: 9rem;
             padding: 1.75rem 2rem;
+            will-change: transform;
         }
 
         .team-position,
@@ -440,6 +441,18 @@
             return '';
         }
 
+        function buildTileInner(row, rankClass, trendArrow, index, teamName, cleanKey) {
+            return `
+                <div class="team-position ${rankClass}">${index + 1}</div>
+                <div class="team-emblem">
+                    <img src="emblems/${cleanKey}.png" alt="" onerror="this.remove()">
+                    <span class="emblem-fallback">${teamName.charAt(0).toUpperCase()}</span>
+                </div>
+                <div class="team-title">${teamName}</div>
+                <div class="team-points">${getPoints(row)}<span>${trendArrow}Points</span></div>
+            `;
+        }
+
         async function fetchLeaderboard() {
             const [scoresRes, days] = await Promise.all([
                 fetch('/api/scores'),
@@ -454,28 +467,72 @@
             const pastRanks = computePastRanks(data);
 
             const container = document.getElementById('leaderboard-rows');
-            container.innerHTML = '';
-            
+
+            // FLIP step 1 (First): record current on-screen positions before we touch anything
+            const firstRects = new Map();
+            container.querySelectorAll('.team-tile').forEach(el => {
+                firstRects.set(el.dataset.team, el.getBoundingClientRect());
+            });
+
+            const seenKeys = new Set();
+
             data.forEach((row, index) => {
                 const teamName = getTeamName(row);
-                const points = getPoints(row);
+                const cleanKey = getCleanKey(teamName);
+                seenKeys.add(cleanKey);
                 const trendArrow = getTrendArrow(teamName, index + 1, pastRanks);
-                
+
                 let rankClass = "";
                 if (index === 0) rankClass = "rank-1";
                 else if (index === 1) rankClass = "rank-2";
 
-                container.innerHTML += `
-                    <div data-testid="stContainer" class="team-tile ${rankClass}">
-                        <div class="team-position ${rankClass}">${index + 1}</div>
-                        <div class="team-emblem">
-                            <img src="emblems/${getCleanKey(teamName)}.png" alt="" onerror="this.remove()">
-                            <span class="emblem-fallback">${teamName.charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div class="team-title">${teamName}</div>
-                        <div class="team-points">${points}<span>${trendArrow}Points</span></div>
-                    </div>
-                `;
+                let el = container.querySelector(`.team-tile[data-team="${cleanKey}"]`);
+                const isNew = !el;
+                if (isNew) {
+                    el = document.createElement('div');
+                    el.dataset.team = cleanKey;
+                    el.setAttribute('data-testid', 'stContainer');
+                }
+                el.className = `team-tile ${rankClass}`;
+                el.innerHTML = buildTileInner(row, rankClass, trendArrow, index, teamName, cleanKey);
+
+                // Reorder: put this element in its correct slot among current siblings
+                const referenceNode = container.children[index];
+                if (referenceNode !== el) {
+                    container.insertBefore(el, referenceNode || null);
+                }
+
+                if (isNew) {
+                    // Simple fade/slide-in for brand new tiles (no prior position to FLIP from)
+                    el.style.transition = 'none';
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(-12px)';
+                    void el.offsetHeight; // force reflow
+                    el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                    el.style.opacity = '';
+                    el.style.transform = '';
+                }
+            });
+
+            // Drop tiles for teams no longer present
+            Array.from(container.querySelectorAll('.team-tile')).forEach(el => {
+                if (!seenKeys.has(el.dataset.team)) el.remove();
+            });
+
+            // FLIP steps 2-4 (Last, Invert, Play): diff old vs new position, animate the delta away
+            container.querySelectorAll('.team-tile').forEach(el => {
+                const first = firstRects.get(el.dataset.team);
+                if (!first) return; // brand new tile, already handled above
+
+                const last = el.getBoundingClientRect();
+                const deltaY = first.top - last.top;
+                if (Math.abs(deltaY) < 1) return;
+
+                el.style.transition = 'none';
+                el.style.transform = `translateY(${deltaY}px)`;
+                void el.offsetHeight; // force reflow so the browser commits the "Invert" position
+                el.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+                el.style.transform = '';
             });
         }
         (async function init() {
