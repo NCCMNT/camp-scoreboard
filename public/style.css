@@ -6,6 +6,8 @@
     --text: #f4eae0;             /* Bleached sand light text */
     --muted: #a69685;            /* Soft dust / dry brush gray */
     --accent: var(--rank-others-color, #c57a2b);
+    --accent-dim: #8f5a2a;       /* Dimmer variant for secondary buttons */
+    --apply-highlight: var(--rank1-color, #e0a6c7); /* pinkish highlight for Apply */
     --first: #e9c244;
     --second: #c9cdd1;
     --accent-glow: rgba(0, 0, 0, 0.08);
