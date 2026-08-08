@@ -418,7 +418,7 @@
                 position: sticky;
                 bottom: 0;
                 overflow: visible; /* Allows curved arrow tab to extend above panel */
-                padding: 0.75rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+                padding: 1.1rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
                 background-color: var(--bg-card);
                 border-top: 1px solid var(--border);
                 border-radius: 12px 12px 0 0;
@@ -432,18 +432,19 @@
                 align-items: center;
                 justify-content: center;
                 position: absolute;
-                top: -20px;
+                top: -12px;
                 left: 50%;
                 transform: translateX(-50%);
-                width: 72px;
-                height: 21px;
+                width: 84px;
+                height: 28px;
                 background-color: var(--bg-card);
                 border: 1px solid var(--border);
                 border-bottom: none;
                 border-radius: 12px 12px 0 0; /* Curve edges around the arrow */
                 cursor: pointer;
-                z-index: 51;
+                z-index: 60;
                 padding: 0;
+                box-shadow: 0 -6px 18px rgba(0,0,0,0.28);
             }
 
             .actions-toggle-svg {
@@ -465,6 +466,7 @@
                 opacity: 1;
                 overflow: hidden;
                 transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
+                margin-top: 8px; /* separate grid from the toggle button */
             }
 
             /* Collapsed State: Makes left and right space fully transparent */
@@ -472,13 +474,12 @@
                 background-color: transparent;
                 border-top-color: transparent;
                 box-shadow: none;
-                padding-top: 0;
-                padding-bottom: 0;
+                padding-top: 0.6rem;
             }
 
             .bottom-actions.collapsed .actions-toggle-btn {
-                bottom: 0;
-                top: auto;
+                /* Keep the toggle positioned above the panel even when collapsed */
+                top: -12px;
                 border-bottom: 1px solid var(--border);
                 border-radius: 10px 10px 0 0;
                 box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
@@ -978,14 +979,15 @@
                 return;
             }
 
+            const realTeamName = teamLookup[activeUploadKey] || activeUploadKey;
             showToast('Processing image...');
 
             try {
                 const blob = await processImageToSquarePng(file);
 
                 const formData = new FormData();
-                formData.append('emblem', blob, `${activeUploadKey}.png`);
-                formData.append('team_key', activeUploadKey);
+                formData.append('emblem', blob, `${activeUploadKey}.jpg`);
+                formData.append('team_key', realTeamName);
 
                 const res = await fetch('/api/upload-emblem', {
                     method: 'POST',
@@ -997,8 +999,10 @@
                     showToast('Emblem updated successfully!');
                     const imgElement = document.querySelector(`#tile-${activeUploadKey} .team-emblem img`);
                     if (imgElement) {
-                        imgElement.src = `emblems/${activeUploadKey}.png?t=${Date.now()}`;
-                        imgElement.style.display = 'block';
+                        imgElement.onload = function() {
+                            this.style.display = 'block';
+                        };
+                        imgElement.src = `/emblems/${activeUploadKey}.png?t=${Date.now()}`;
                     }
                 } else {
                     const errorText = await res.text();

@@ -107,7 +107,6 @@ async def health_check():
 async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...)):
     try:
         contents = await emblem.read()
-        
         content_type = emblem.content_type or "image/jpeg"
         encoded_image = base64.b64encode(contents).decode("utf-8")
         data_url = f"data:{content_type};base64,{encoded_image}"
@@ -123,8 +122,14 @@ async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...
             pass
 
         db.execute(
-            "UPDATE teams SET emblem_url = ?, primary_color = ?, secondary_color = ? WHERE team = ?",
-            (data_url, p_color, s_color, team_key)
+            """
+            UPDATE teams 
+            SET emblem_url = ?, primary_color = ?, secondary_color = ? 
+            WHERE team = ? 
+               OR LOWER(team) = LOWER(?)
+               OR LOWER(REPLACE(team, ' ', '_')) = LOWER(?)
+            """,
+            (data_url, p_color, s_color, team_key, team_key, team_key)
         )
         
         return {
@@ -141,14 +146,21 @@ async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...
 async def get_emblem(filename: str):
     """Serve team emblem images directly out of Turso DB."""
     team_key = Path(filename).stem
-    rows = db.execute("SELECT emblem_url FROM teams WHERE team = ?", (team_key,))
+    rows = db.execute(
+        """
+        SELECT emblem_url FROM teams 
+        WHERE team = ? 
+           OR LOWER(team) = LOWER(?)
+           OR LOWER(REPLACE(team, ' ', '_')) = LOWER(?)
+        """,
+        (team_key, team_key, team_key)
+    )
     
     if rows and rows[0].get("emblem_url"):
         data_url = rows[0]["emblem_url"]
         if data_url and data_url.startswith("data:image"):
             header, encoded = data_url.split(",", 1)
             media_type = header.split(";")[0].replace("data:", "") or "image/jpeg"
-            
             img_bytes = base64.b64decode(encoded)
             return Response(content=img_bytes, media_type=media_type)
 
