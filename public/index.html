@@ -85,7 +85,14 @@
            - Position numbers use the palette colors
            - Points use special styling: first = gradient+border, second = silver, others = white
         */
-        .rank-1 .team-position { color: var(--rank1-color); }
+        .rank-1 .team-position {
+            background: linear-gradient(45deg, #ffd27f 10%, var(--rank1-color) 90%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            font-weight: 800;
+        }
         .rank-2 .team-position { color: var(--rank2-color); }
         .team-tile:not(.rank-1):not(.rank-2) .team-position { color: var(--rank-others-color); }
 
@@ -103,7 +110,6 @@
             background-clip: text;
             color: transparent;
             font-weight: 900;
-            text-shadow: 0 1px 0 rgba(0,0,0,0.25);
         }
         .rank-1 .team-points span { color: var(--muted); }
 
@@ -130,7 +136,7 @@
             top: 0;
             left: 0;
             height: 100%;
-            width: 40%;
+            width: 45%; /* Poszerzone do 45%, by płynne przejście miało przestrzeń */
             background: linear-gradient(160deg, rgba(38, 34, 29, 0.9), rgba(28, 26, 23, 0.9));
             border: none;
             border-radius: 0;
@@ -140,8 +146,10 @@
             overflow: hidden;
             pointer-events: none;
             z-index: 1;
-            opacity: 0.25;
-            clip-path: polygon(0 0, 80% 0, 100% 100%, 0 100%);
+            opacity: 0.35;
+
+            -webkit-mask-image: linear-gradient(108deg, #000 0%, #000 55%, transparent 92%);
+            mask-image: linear-gradient(108deg, #000 0%, #000 55%, transparent 92%);
         }
 
         .team-emblem img {
@@ -235,8 +243,9 @@
             }
 
             .team-emblem {
-                width: 50%;
-                clip-path: polygon(0 0, 75% 0, 95% 100%, 0 100%);
+                width: 55%;
+                -webkit-mask-image: linear-gradient(108deg, #000 0%, #000 45%, transparent 90%);
+                mask-image: linear-gradient(108deg, #000 0%, #000 45%, transparent 90%);
             }
         }
     </style>
