@@ -254,15 +254,15 @@
             height: 3rem;
             padding-inline: 1.25rem;
             font-size: 1rem;
-            background-color: var(--accent);
+            background: linear-gradient(90deg, var(--apply-highlight), var(--accent));
+            color: #ffffff;
             flex-grow: 1;
             cursor: pointer;
-            transition: filter 0.15s;
+            transition: filter 0.12s, transform 0.08s;
         }
 
         .apply-button:hover:not(:disabled) {
-            background: linear-gradient(90deg, var(--apply-highlight), var(--accent));
-            color: #ffffff;
+            filter: brightness(1.04);
         }
 
         .apply-button:active:not(:disabled) {
