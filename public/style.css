@@ -7,7 +7,7 @@
     --muted: #a69685;            /* Soft dust / dry brush gray */
     --accent: #d96b43;           /* Terracotta / Sunset Orange */
     --first: #e9c244;
-    --second: #999999;
+    --second: #c9cdd1;
     --accent-glow: rgba(217, 107, 67, 0.15);
     --success: #6e8467;          /* Desert Sage Green */
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -195,12 +195,7 @@ hr {
     border: none;
 }
 
-[data-testid="stContainer"].team-tile.rank-1 .team-title {
-    color: var(--first);
-}
-[data-testid="stContainer"].team-tile.rank-1 .team-position {
-    color: var(--first);
-}
+
 
 /* 2nd Place: Marginally larger layout with soft desert sage green splash */
 [data-testid="stContainer"].team-tile.rank-2 {

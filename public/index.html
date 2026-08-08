@@ -93,6 +93,14 @@
             color: transparent;
             font-weight: 800;
         }
+        .rank-1 .team-title {
+            background: linear-gradient(45deg, #ffd27f 10%, var(--rank1-color) 90%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            font-weight: 800;
+        }
         .rank-2 .team-position { color: var(--rank2-color); }
         .team-tile:not(.rank-1):not(.rank-2) .team-position { color: var(--rank-others-color); }
 
@@ -120,6 +128,7 @@
         /* Others: darker/brown positions, numeric score must be white */
         .team-tile:not(.rank-1):not(.rank-2) .team-points { color: #ffffff; }
         .team-tile:not(.rank-1):not(.rank-2) .team-points span { color: var(--muted); }
+        .team-tile:not(.rank-1):not(.rank-2) .team-title { color: var(--rank-others-color); }
 
         .team-position {
             font-size: 3rem;
