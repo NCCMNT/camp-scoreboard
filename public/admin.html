@@ -56,29 +56,6 @@
             transition: border-color 0.15s, background-color 0.15s;
         }
 
-        .day-title-input::placeholder {
-            color: var(--muted);
-            font-weight: 500;
-        }
-
-        .day-title-input:hover, .day-title-input:focus {
-            border-color: var(--accent-dim);
-            background-color: var(--bg-main);
-            outline: none;
-        }
-
-        .day-title-input:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        /* non-interactive display state for read-only day title */
-        .day-title-input.disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
         .controls-list {
             display: grid;
             gap: 0.9rem;
@@ -99,6 +76,45 @@
             width: 100%;
             transition: border-color 0.15s, background-color 0.15s;
         }
+
+        /* Login input/button styles */
+        .auth-input {
+            display: block;
+            width: 100%;
+            max-width: 420px;
+            margin: 0.6rem auto;
+            padding: 0.65rem 0.9rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .auth-input::placeholder { color: var(--muted); font-weight: 600; }
+
+        .auth-button {
+            display: block;
+            margin: 0.8rem auto 0;
+            padding: 0.6rem 1rem;
+            width: 100%;
+            max-width: 320px;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #ffffff;
+            background: var(--change-flat);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+            transition: filter 0.12s, transform 0.06s;
+        }
+
+        .auth-button:hover { filter: brightness(1.06); }
+
 
         .team-title-input:hover, .team-title-input:focus {
             border-color: var(--border);
@@ -807,7 +823,7 @@
 <body>
     <div class="block-container">
         <!-- Auth View Container -->
-        <div id="login-section" data-testid="stForm" style="max-width: 450px; margin: 4rem auto; display: block;">
+        <div id="login-section" data-testid="stForm" style="max-width: 450px; margin: 3.2rem auto; display: none;">
             <h2>Counselor Access</h2>
             <p style="color: var(--muted);">Enter your name and the PIN to unlock score updates.</p>
             <input type="text" id="counselor-name-input" class="auth-input" placeholder="Your name">
