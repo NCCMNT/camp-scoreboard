@@ -1265,6 +1265,7 @@
 
             document.getElementById('login-section').style.display = 'block';
             document.getElementById('controls-section').style.display = 'none';
+            try { lockBodyScroll(); } catch (e) {}
         }
 
         async function handleLogin() {
@@ -1302,6 +1303,7 @@
         async function loadCounselorPanel() {
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('controls-section').style.display = 'block';
+            try { unlockBodyScroll(); } catch (e) {}
 
             const [res, config] = await Promise.all([
                 fetch('/api/scores', { credentials: 'same-origin' }),
