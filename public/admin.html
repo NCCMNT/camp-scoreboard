@@ -185,7 +185,7 @@
             flex-shrink: 0;
             opacity: 0.8;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: transform 0.45s;
         }
 
         .team-emblem:hover {
@@ -570,7 +570,7 @@
                 width: 20px;
                 height: 12px;
                 color: currentColor;
-                transition: transform 0.18s ease, color 0.12s ease;
+                transition: transform 0.35s ease, color 0.25s ease;
             }
 
             .bottom-actions-grid {
@@ -579,7 +579,7 @@
                 max-height: 260px;
                 opacity: 1;
                 overflow: hidden;
-                transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
+                transition: max-height 0.45s ease-out, opacity 0.35s ease-out;
                 margin-top: 8px;
             }
 
@@ -791,6 +791,36 @@
             display: inline-flex;
             gap: 0.35rem;
             align-items: center;
+        }
+
+        /* Rank change arrow */
+        .rank-arrow {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            line-height: 18px;
+            text-align: center;
+            font-size: 12px;
+            border-radius: 6px;
+            color: #ffffff;
+            opacity: 0;
+            transform: translateY(0);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            background: transparent;
+        }
+
+        .rank-arrow.rank-up {
+            background: rgba(34,197,94,0.18);
+            color: #16a34a;
+            opacity: 1;
+            transform: translateY(-2px);
+        }
+
+        .rank-arrow.rank-down {
+            background: rgba(239,68,68,0.14);
+            color: #dc2626;
+            opacity: 1;
+            transform: translateY(2px);
         }
 
         @media (max-width: 640px) {
@@ -1323,6 +1353,9 @@
             const container = document.getElementById('counselor-rows');
             container.innerHTML = '';
 
+            // keep previous known ranking and team points map for arrow detection
+            window.prevRanking = window.currentRanking || [];
+            window.teamPointsMap = {};
             const ranking = [...data].sort((a,b) => getOverallPoints(b) - getOverallPoints(a)).map(r => getTeamName(r));
 
             data.forEach((row) => {
@@ -1346,7 +1379,10 @@
 
                         <!-- EDITABLE TEAM TITLE AND LEADER NAME -->
                         <div class="team-header">
-                            <input type="text" class="team-title-input" id="title-input-${cleanKey}" value="${teamName}" onblur="saveTeamDetails('${cleanKey}')" title="Click to edit team name">
+                            <div class="title-row" style="display:flex;align-items:center;gap:0.5rem;">
+                                <input type="text" class="team-title-input" id="title-input-${cleanKey}" value="${teamName}" onblur="saveTeamDetails('${cleanKey}')" title="Click to edit team name">
+                                <span class="rank-arrow" id="rank-${cleanKey}" aria-hidden="true"></span>
+                            </div>
                             <input type="text" class="leader-title-input" id="leader-input-${cleanKey}" value="${leaderName}" onblur="saveTeamDetails('${cleanKey}')" title="Click to edit leader name" placeholder="Leader Name">
                         </div>
 
@@ -1366,7 +1402,12 @@
                     </div>
                 `;
                 bindChangeInput(cleanKey);
+                // populate the points map for later comparisons
+                window.teamPointsMap[teamName] = overallPoints;
             });
+
+            // store current ranking for subsequent comparisons
+            window.currentRanking = ranking;
 
             if (!refreshTimer) {
                 refreshTimer = setInterval(refreshCounselorPoints, 10000);
@@ -1744,6 +1785,42 @@
                         if (overallEl) overallEl.innerHTML = `${data.new_summary}<span>Overall Points</span>`;
                     }
                     setChangeValue(cleanKey, 0);
+                    // compute rank change for this team and show arrow
+                    try {
+                        const teamNameLocal = teamName;
+                        // update local points map
+                        if (!window.teamPointsMap) window.teamPointsMap = {};
+                        window.teamPointsMap[teamNameLocal] = data.new_summary;
+
+                        const oldRanking = window.currentRanking || [];
+                        const newRanking = Object.keys(window.teamPointsMap).sort((a,b) => (window.teamPointsMap[b] || 0) - (window.teamPointsMap[a] || 0));
+
+                        // determine movement for this team
+                        const prevIdx = oldRanking.indexOf(teamNameLocal);
+                        const newIdx = newRanking.indexOf(teamNameLocal);
+                        const cleanKeyLocal = cleanKey;
+                        const arrowEl = document.getElementById(`rank-${cleanKeyLocal}`);
+                        if (arrowEl) {
+                            arrowEl.classList.remove('rank-up','rank-down');
+                            if (prevIdx >=0 && newIdx >= 0 && newIdx < prevIdx) {
+                                arrowEl.textContent = '▲';
+                                arrowEl.classList.add('rank-up');
+                            } else if (prevIdx >=0 && newIdx >=0 && newIdx > prevIdx) {
+                                arrowEl.textContent = '▼';
+                                arrowEl.classList.add('rank-down');
+                            } else {
+                                arrowEl.textContent = '';
+                            }
+                            // clear arrow after a few seconds
+                            setTimeout(() => {
+                                try { arrowEl.classList.remove('rank-up','rank-down'); arrowEl.textContent = ''; } catch(e){}
+                            }, 4200);
+                        }
+
+                        // update stored ranking
+                        window.prevRanking = oldRanking;
+                        window.currentRanking = newRanking;
+                    } catch (e) { /* ignore arrow errors */ }
                 } else {
                     showToast(formatErrorDetail(data?.detail, 'Session expired or error saving update.'), { type: 'error' });
                     checkAuth();
