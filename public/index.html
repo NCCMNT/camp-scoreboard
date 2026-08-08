@@ -230,19 +230,6 @@
             color: var(--muted);
         }
 
-        .trend-arrow {
-            display: inline-block;
-            font-size: 1.3em;
-            line-height: 1;
-        }
-
-        .trend-arrow.trend-up {
-            color: var(--success);
-        }
-
-        .trend-arrow.trend-down {
-            color: #c0453a;
-        }
 
         @media (max-width: 640px) {
             .team-tile {
@@ -434,10 +421,6 @@
         }
 
         function getTrendArrow(teamName, currentRank, pastRanks) {
-            if (!pastRanks || !pastRanks.has(teamName)) return '';
-            const pastRank = pastRanks.get(teamName);
-            if (currentRank < pastRank) return '<span class="trend-arrow trend-up">&#9650;</span>';
-            if (currentRank > pastRank) return '<span class="trend-arrow trend-down">&#9660;</span>';
             return '';
         }
 
