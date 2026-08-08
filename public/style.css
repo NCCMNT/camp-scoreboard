@@ -194,39 +194,3 @@ button:hover {
 hr {
     border: none;
 }
-
-/* --- SUBTLE PODIUM POSITION HIGHLIGHTS --- */
-
-/* 1st Place: Subtle Terracotta scale and warm sunset gradient splash */
-[data-testid="stContainer"].team-tile.rank-1 {
-    transform: scale(1.02);
-    border-color: var(--first);
-    background: linear-gradient(135deg, var(--bg-card) 75%, rgba(217, 107, 67, 0.08) 100%);
-}
-[data-testid="stContainer"].team-tile.rank-1 .team-title {
-    color: var(--first);
-}
-[data-testid="stContainer"].team-tile.rank-1 .team-position {
-    color: var(--first);
-}
-
-/* 2nd Place: Marginally larger layout with soft desert sage green splash */
-[data-testid="stContainer"].team-tile.rank-2 {
-    transform: scale(1.01);
-    border-color: var(--second);
-    background: linear-gradient(135deg, var(--bg-card) 75%, rgba(110, 132, 103, 0.06) 100%);
-}
-[data-testid="stContainer"].team-tile.rank-2 .team-title {
-    color: var(--second);
-}
-[data-testid="stContainer"].team-tile.rank-2 .team-position {
-    color: var(--second);
-}
-
-/* Keep hover states consistent across the podium ranks */
-[data-testid="stContainer"].team-tile.rank-1:hover {
-    transform: scale(1.03) translateY(-2px);
-}
-[data-testid="stContainer"].team-tile.rank-2:hover {
-    transform: scale(1.02) translateY(-2px);
-}
