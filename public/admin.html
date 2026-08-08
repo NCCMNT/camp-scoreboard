@@ -938,8 +938,6 @@
 
         document.getElementById('emblem-file-input').addEventListener('change', async function(e) {
             const file = e.target.files && e.target.files[0];
-            console.log('File picked:', file?.name, '| Target key:', activeUploadKey);
-
             if (!file) return;
 
             if (!activeUploadKey) {
@@ -956,8 +954,6 @@
                 formData.append('emblem', blob, `${activeUploadKey}.png`);
                 formData.append('team_key', activeUploadKey);
 
-                console.log('Sending POST request to /api/upload-emblem...');
-
                 const res = await fetch('/api/upload-emblem', {
                     method: 'POST',
                     body: formData,
@@ -972,9 +968,17 @@
                         imgElement.style.display = 'block';
                     }
                 } else {
-                    const errData = await res.json().catch(() => null);
-                    console.error('Server returned error on upload:', res.status, errData);
-                    showToast(formatErrorDetail(errData?.detail, 'Failed to save emblem on server.'), { type: 'error' });
+                    const errorText = await res.text();
+                    console.error(`HTTP Upload Error ${res.status}:`, errorText);
+
+                    let errData = null;
+                    try { errData = JSON.parse(errorText); } catch (_) {}
+
+                    const errorMessage = errData?.detail 
+                        ? formatErrorDetail(errData.detail, 'Failed to save emblem on server.')
+                        : `Upload failed (HTTP ${res.status})`;
+
+                    showToast(errorMessage, { type: 'error' });
                 }
             } catch (err) {
                 console.error('Client-side processing error:', err);
