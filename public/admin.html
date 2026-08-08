@@ -1552,7 +1552,7 @@
             const originalLabel = button.textContent;
 
             button.disabled = true;
-            button.textContent = 'Syncing…';
+            button.textContent = '…';
 
             try {
                 const res = await fetch('/api/sync-to-sheets', {
@@ -1568,7 +1568,7 @@
                 }
 
                 if (res.ok) {
-                    button.textContent = 'Synced';
+                    button.textContent = 'Done';
                 } else {
                     button.textContent = formatErrorDetail(data?.detail, 'Sync failed').slice(0, 30);
                 }
