@@ -73,8 +73,7 @@
             min-height: 9rem;
             padding: 1.75rem 2rem;
             will-change: transform;
-            /* smoother, slower default transition for tile movement */
-            transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.9s ease;
+            transition: transform 2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.9s ease;
         }
 
         .team-position,
@@ -493,7 +492,7 @@
                     el.style.opacity = '0';
                     el.style.transform = 'translateY(-12px)';
                     void el.offsetHeight; // force reflow
-                    el.style.transition = 'opacity 0.9s ease, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)';
+                    el.style.transition = 'opacity 2s ease, transform 2s cubic-bezier(0.22, 1, 0.36, 1)';
                     el.style.opacity = '';
                     el.style.transform = '';
                 }
@@ -516,7 +515,7 @@
                 el.style.transition = 'none';
                 el.style.transform = `translateY(${deltaY}px)`;
                 void el.offsetHeight; // force reflow so the browser commits the "Invert" position
-                el.style.transition = 'transform 1s cubic-bezier(0.22, 1, 0.36, 1)';
+                el.style.transition = 'transform 2s cubic-bezier(0.22, 1, 0.36, 1)';
                 el.style.transform = '';
             });
         }
