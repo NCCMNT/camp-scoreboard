@@ -156,6 +156,18 @@
             background: linear-gradient(160deg, var(--bg-card), var(--bg-main));
         }
 
+        .finished-tile {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1.25rem;
+            font-weight: 800;
+            color: var(--muted);
+            background: linear-gradient(160deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            border: 1px dashed rgba(255,255,255,0.04);
+        }
+
         .block-container {
             position: relative;
             z-index: 1;
@@ -1368,6 +1380,17 @@
                 // populate the points map for later comparisons
                 window.teamPointsMap[teamName] = overallPoints;
             });
+
+                // If there are no more active days to finish, show a friendly finished tile
+                try {
+                    const dayIsActive = !!(currentDayIndex && Array.isArray(dayColumns) && currentDayIndex <= dayColumns.length);
+                    if (!dayIsActive) {
+                        const finished = document.createElement('div');
+                        finished.className = 'control-tile finished-tile';
+                        finished.innerHTML = `<div style="font-size:1.05rem;">All days have been captured — you can review or edit any past day using the <strong>Edit</strong> button below.</div>`;
+                        container.appendChild(finished);
+                    }
+                } catch (e) { /* ignore UI errors */ }
 
             // store current ranking for subsequent comparisons
             window.currentRanking = ranking;
