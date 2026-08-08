@@ -46,6 +46,13 @@
             filter: saturate(0.95) contrast(0.98);
         }
 
+        /* Rank color variables (will be set from background image palette) */
+        :root {
+            --rank1-color: #e0a6c7; /* fallback pink */
+            --rank2-color: #79c9b4; /* fallback sea green */
+            --rank-others-color: #c57a2b; /* fallback brown/orange */
+        }
+
         .block-container {
             max-width: 1100px;
         }
@@ -73,6 +80,16 @@
             position: relative;
             z-index: 2;
         }
+
+        /* Apply extracted colors */
+        .rank-1 .team-position,
+        .rank-1 .team-points { color: var(--rank1-color); }
+
+        .rank-2 .team-position,
+        .rank-2 .team-points { color: var(--rank2-color); }
+
+        .team-tile:not(.rank-1):not(.rank-2) .team-position,
+        .team-tile:not(.rank-1):not(.rank-2) .team-points { color: var(--rank-others-color); }
 
         .team-position {
             font-size: 3rem;
@@ -206,6 +223,93 @@
     </div>
 
     <script>
+        /* --- Palette extraction from background image --- */
+        function parseCssUrl(val) {
+            if (!val) return null;
+            val = val.trim();
+            if (val.startsWith('url(')) val = val.slice(4, -1).trim();
+            return val.replace(/^['"]|['"]$/g, '');
+        }
+
+        function loadImage(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = url;
+            });
+        }
+
+        function toHex(rgb) {
+            return '#' + [rgb.r, rgb.g, rgb.b].map(v => v.toString(16).padStart(2, '0')).join('');
+        }
+
+        function extractPalette(img, bucketShift = 4, maxColors = 8) {
+            const w = Math.max(32, Math.round(img.width * 0.12));
+            const h = Math.max(32, Math.round(img.height * 0.12));
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const data = ctx.getImageData(0, 0, w, h).data;
+
+            const buckets = new Map();
+            for (let i = 0; i < data.length; i += 4 * 2) { // sample every other pixel for speed
+                const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+                if (a < 125) continue; // skip transparent
+                const kr = r >> bucketShift, kg = g >> bucketShift, kb = b >> bucketShift;
+                const key = (kr << 16) | (kg << 8) | kb;
+                const entry = buckets.get(key) || {count:0, r:0, g:0, b:0};
+                entry.count += 1; entry.r += r; entry.g += g; entry.b += b;
+                buckets.set(key, entry);
+            }
+
+            const list = Array.from(buckets.entries()).map(([key, v]) => {
+                return { key, count: v.count, r: Math.round(v.r / v.count), g: Math.round(v.g / v.count), b: Math.round(v.b / v.count) };
+            });
+            list.sort((a,b) => b.count - a.count);
+            return list.slice(0, maxColors).map(c => ({ r: c.r, g: c.g, b: c.b, hex: toHex(c) }));
+        }
+
+        function pickColorByPreference(palette, preference) {
+            // preference: 'red', 'green', 'warm'
+            if (!palette || palette.length === 0) return null;
+            let best = palette[0];
+            let bestScore = -Infinity;
+            for (const p of palette) {
+                const r = p.r, g = p.g, b = p.b;
+                const brightness = (r + g + b) / 3;
+                let score = 0;
+                if (preference === 'red') score = r - (g + b) * 0.5 + (brightness - 128) * 0.2;
+                else if (preference === 'green') score = g - (r + b) * 0.5 + (brightness - 110) * 0.12;
+                else if (preference === 'warm') score = (r + g) - b - Math.abs(128 - brightness) * 0.05;
+                else score = p.count;
+                if (score > bestScore) { bestScore = score; best = p; }
+            }
+            return best.hex;
+        }
+
+        async function applyPaletteFromBackground() {
+            try {
+                const styleVal = getComputedStyle(document.documentElement).getPropertyValue('--bg-image-url');
+                const url = parseCssUrl(styleVal) || 'bg.jpg';
+                const img = await loadImage(url);
+                const palette = extractPalette(img, 4, 8);
+
+                const rank1 = pickColorByPreference(palette, 'red') || '#e0a6c7'; // pink-like
+                const rank2 = pickColorByPreference(palette, 'green') || '#79c9b4'; // sea-green-like
+                const others = pickColorByPreference(palette, 'warm') || '#c57a2b'; // brown/orange-like
+
+                document.documentElement.style.setProperty('--rank1-color', rank1);
+                document.documentElement.style.setProperty('--rank2-color', rank2);
+                document.documentElement.style.setProperty('--rank-others-color', others);
+            } catch (err) {
+                // silently fail and keep fallbacks
+                console.warn('Palette extraction failed', err);
+            }
+        }
+
         function getTeamName(row) {
             return row.Team ?? row.team_name ?? row.team ?? 'Unknown Team';
         }
@@ -300,8 +404,11 @@
                 `;
             });
         }
-        fetchLeaderboard();
-        setInterval(fetchLeaderboard, 10000);
+        (async function init() {
+            await applyPaletteFromBackground();
+            await fetchLeaderboard();
+            setInterval(fetchLeaderboard, 10000);
+        })();
     </script>
 </body>
 </html>
