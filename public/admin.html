@@ -1323,10 +1323,22 @@
 
             data.sort((a, b) => getTeamName(a).localeCompare(getTeamName(b)));
 
+
             updateDayIndicator();
 
             const container = document.getElementById('counselor-rows');
             container.innerHTML = '';
+
+            // If there are no active days left, show a single finished tile and skip rendering teams
+            const dayIsActive = !!(currentDayIndex && Array.isArray(dayColumns) && currentDayIndex <= dayColumns.length);
+            if (!dayIsActive) {
+                const finished = document.createElement('div');
+                finished.className = 'control-tile finished-tile';
+                finished.innerHTML = `<div style="font-size:1.05rem;">All days have been captured — you can review or edit any past day using the <strong>Edit</strong> button below.</div>`;
+                container.appendChild(finished);
+                try { unlockBodyScroll(); } catch (e) {}
+                return;
+            }
 
             // keep previous known ranking and team points map for arrow detection
             window.prevRanking = window.currentRanking || [];
@@ -1381,16 +1393,7 @@
                 window.teamPointsMap[teamName] = overallPoints;
             });
 
-                // If there are no more active days to finish, show a friendly finished tile
-                try {
-                    const dayIsActive = !!(currentDayIndex && Array.isArray(dayColumns) && currentDayIndex <= dayColumns.length);
-                    if (!dayIsActive) {
-                        const finished = document.createElement('div');
-                        finished.className = 'control-tile finished-tile';
-                        finished.innerHTML = `<div style="font-size:1.05rem;">All days have been captured — you can review or edit any past day using the <strong>Edit</strong> button below.</div>`;
-                        container.appendChild(finished);
-                    }
-                } catch (e) { /* ignore UI errors */ }
+            
 
             // store current ranking for subsequent comparisons
             window.currentRanking = ranking;
