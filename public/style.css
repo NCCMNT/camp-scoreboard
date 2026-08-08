@@ -5,10 +5,10 @@
     --border: #3d352b;           /* Muted canyon rock border */
     --text: #f4eae0;             /* Bleached sand light text */
     --muted: #a69685;            /* Soft dust / dry brush gray */
-    --accent: #d96b43;           /* Terracotta / Sunset Orange */
+    --accent: var(--rank-others-color, #d96b43);
     --first: #e9c244;
     --second: #c9cdd1;
-    --accent-glow: rgba(217, 107, 67, 0.15);
+    --accent-glow: rgba(0, 0, 0, 0.08);
     --success: #6e8467;          /* Desert Sage Green */
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }

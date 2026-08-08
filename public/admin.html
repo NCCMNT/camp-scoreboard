@@ -254,7 +254,7 @@
             height: 3rem;
             padding-inline: 1.25rem;
             font-size: 1rem;
-            background-color: #be3300;
+            background-color: var(--accent);
             flex-grow: 1;
             cursor: pointer;
             transition: filter 0.15s;
@@ -290,7 +290,13 @@
         }
 
         #controls-section h2 {
-            margin-bottom: 1.25rem;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            font-weight: 900;
+            line-height: 1.02;
+            letter-spacing: -0.03rem;
+            text-transform: uppercase;
+            text-align: center;
+            margin: 2rem 0 1.5rem 0;
         }
 
         /* --- NON-TRANSPARENT & COLLAPSIBLE BOTTOM ACTIONS --- */
@@ -414,10 +420,10 @@
         }
 
         .bottom-actions .snapshot-button {
-            background-color: #b65624;
+            background-color: var(--accent);
             color: #ffffff;
             border: none;
-            box-shadow: 0 6px 16px rgba(182, 86, 36, 0.35);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
         }
 
         .bottom-actions .snapshot-button::before {
@@ -582,7 +588,7 @@
         }
 
         .modal-confirm-button {
-            background-color: #b65624;
+            background-color: var(--accent);
             color: #ffffff;
             border: none;
         }
@@ -628,7 +634,7 @@
         }
 
         .modal-select-dropdown:focus {
-            border-color: #b65624;
+            border-color: var(--accent);
         }
 
         .toast {
@@ -660,7 +666,7 @@
         }
 
         .toast.is-error {
-            border-color: #b65624;
+            border-color: var(--accent);
         }
 
         .toast.is-error::before {
@@ -680,9 +686,9 @@
 
         <!-- Authenticated Controls View Container -->
         <div id="controls-section" style="display: none;">
-            <h2 style="text-align: center;">Control Panel</h2>
+            <h2 style="text-align: center;">EXODUS FUNTIME</h2>
             <p id="camp-day-indicator" style="color: var(--muted); text-align: center; margin-top: -0.75rem; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08rem;"></p>
-            <div id="editing-day-banner" style="display: none; text-align: center; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06rem; color: #b65624;">
+            <div id="editing-day-banner" style="display: none; text-align: center; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06rem; color: var(--accent);">
                 <span id="editing-day-label"></span>
                 &nbsp;·&nbsp;
                 <a href="#" onclick="exitEditingDay(); return false;" style="color: inherit; text-decoration: underline;">Back to today</a>
