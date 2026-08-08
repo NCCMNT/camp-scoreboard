@@ -15,8 +15,6 @@
             font-display: swap;
         }
 
-        h1, h2, h3,
-        p,
         .team-title,
         .emblem-fallback {
             font-family: 'Constantine', system-ui, sans-serif !important;
@@ -51,12 +49,13 @@
         }
 
         .team-position {
-            font-size: 2.2rem;
+            font-size: 3rem;
             font-weight: 800;
             color: var(--accent);
             text-align: left;
             padding-left: 0.5rem;
             white-space: nowrap;
+            font-family: 'Constantine', sans-serif;
         }
 
         .team-emblem {
@@ -127,7 +126,6 @@
             letter-spacing: 0.08rem;
             text-transform: uppercase;
             color: var(--muted);
-            font-family: 'Constantine', sans-serif;
         }
 
         .trend-arrow {
@@ -265,7 +263,7 @@
 
                 container.innerHTML += `
                     <div data-testid="stContainer" class="team-tile ${rankClass}">
-                        <div class="team-position ${rankClass}">#${index + 1}</div>
+                        <div class="team-position ${rankClass}">${index + 1}</div>
                         <div class="team-emblem">
                             <img src="emblems/${getCleanKey(teamName)}.png" alt="" onerror="this.remove()">
                             <span class="emblem-fallback">${teamName.charAt(0).toUpperCase()}</span>
