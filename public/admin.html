@@ -81,20 +81,50 @@
         .auth-input {
             display: block;
             width: 100%;
-            max-width: 320px;
+            max-width: 420px;
             margin: 0.6rem auto;
-            padding: 0.65rem 0.9rem;
+            padding: 0.6rem 0.9rem;
+            height: 44px;
             font-size: 1rem;
             font-weight: 700;
+            line-height: 1.2;
             color: var(--text);
             background: var(--bg-main);
             border: 1px solid var(--border);
             border-radius: 8px;
             box-sizing: border-box;
             outline: none;
+            font-family: inherit;
         }
 
-        .auth-input::placeholder { color: var(--muted); font-weight: 600; }
+        #login-section .auth-input::placeholder,
+        #login-section .auth-input::-webkit-input-placeholder,
+        #login-section .auth-input::-moz-placeholder,
+        #login-section .auth-input:-ms-input-placeholder {
+            color: var(--muted);
+            font-weight: 600;
+            opacity: 1;
+        }
+
+        #login-section .auth-input {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        #login-section .auth-input::-ms-clear,
+        #login-section .auth-input::-ms-reveal,
+        #login-section .auth-input::-webkit-clear-button,
+        #login-section .auth-input::-webkit-reveal-button,
+        #login-section .auth-input::-webkit-password-reveal-button,
+        #login-section .auth-input::-webkit-textfield-decoration-container,
+        #login-section .auth-input::-webkit-credentials-auto-fill-button {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
 
         .auth-button {
             display: block;
@@ -681,6 +711,12 @@
             border: none;
         }
 
+        .modal-confirm-button.confirm-danger {
+            background: transparent;
+            color: #e53e3e;
+            border: 1px solid #811d1d;
+        }
+
         .modal-confirm-button:hover {
             filter: brightness(1.08);
         }
@@ -847,7 +883,7 @@
                 <div class="bottom-actions-grid" id="bottom-actions-grid">
                     <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
                     <button type="button" id="logs-trigger-button" class="logs-trigger-button" onclick="openLogsModal()">Logs</button>
-                    <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
+                    <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit</button>
                     <button type="button" id="sync-button" class="sync-button" onclick="syncToSheets()">Sync</button>
                     <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
                 </div>
@@ -1408,7 +1444,7 @@
             }
         }
 
-        function showConfirmModal(message, { title = 'Are you sure?', confirmLabel = 'Confirm' } = {}) {
+        function showConfirmModal(message, { title = 'Are you sure?', confirmLabel = 'Confirm', confirmDanger = false } = {}) {
             const overlay = document.getElementById('confirm-modal');
             const titleEl = document.getElementById('confirm-modal-title');
             const messageEl = document.getElementById('confirm-modal-message');
@@ -1418,6 +1454,7 @@
             titleEl.textContent = title;
             messageEl.textContent = message;
             confirmBtn.textContent = confirmLabel;
+            if (confirmDanger) confirmBtn.classList.add('confirm-danger');
             overlay.classList.add('is-open');
             lockBodyScroll();
             confirmBtn.focus();
@@ -1429,6 +1466,7 @@
                     confirmBtn.removeEventListener('click', onConfirm);
                     overlay.removeEventListener('click', onOverlayClick);
                     document.removeEventListener('keydown', onKeydown);
+                    if (confirmDanger) confirmBtn.classList.remove('confirm-danger');
                     try { unlockBodyScroll(); } catch (e) {}
                     resolve(result);
                 }
@@ -1452,7 +1490,7 @@
             closeReopenModal();
             const confirmed = await showConfirmModal(
                 'This will erase all recorded daily scores, reset the current day to Day 1, and re-import team names and leaders directly from Google Sheets. Are you sure?',
-                { title: 'Full Reset & Sync', confirmLabel: 'Reset Everything' }
+                { title: 'Full Reset & Sync', confirmLabel: 'Reset', confirmDanger: true }
             );
 
             if (!confirmed) return;
