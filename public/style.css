@@ -198,7 +198,7 @@ button:hover {
 /* Ensure all Apply buttons use the same flat apply color */
 .apply-button {
     background-color: var(--apply-flat) !important;
-    color: var(--bg-main) !important;
+    color: #ffffff !important;
     border: none !important;
 }
 
