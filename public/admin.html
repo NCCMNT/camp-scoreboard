@@ -103,6 +103,23 @@
             border-color: var(--accent);
         }
 
+        .auth-button {
+            width: 100%;
+            margin-top: 0.9rem;
+            height: 3rem;
+            background-color: var(--change-flat);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: filter 0.12s, transform 0.08s;
+        }
+
+        .auth-button:hover:not(:disabled) { filter: brightness(1.06); }
+        .auth-button:active:not(:disabled) { filter: brightness(0.92); }
+
         .control-tile {
             position: relative;
             display: flex;
@@ -783,9 +800,7 @@
             <p style="color: var(--muted);">Enter your name and the PIN to unlock score updates.</p>
             <input type="text" id="counselor-name-input" class="auth-input" placeholder="Your name">
             <input type="password" id="pin-input" class="auth-input" placeholder="Enter PIN">
-            <button onclick="handleLogin()" style="width: 100%;">Login</button>
-        </div>
-
+            <button onclick="handleLogin()" class="auth-button">Login</button>
         <!-- Authenticated Controls View Container -->
         <div id="controls-section" style="display: none;">
             <h2 style="text-align: center;">EXODUS FUNTIME</h2>
