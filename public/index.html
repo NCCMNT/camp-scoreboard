@@ -189,6 +189,23 @@
             text-transform: uppercase;
         }
 
+        /* Style name input in any login view to match admin PIN/password styling */
+        input[type="text"], input[type="password"], input[type="number"] {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.5rem;
+            font-family: var(--font);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
         .team-points {
             justify-self: end;
             font-size: clamp(2rem, 5vw, 3.25rem);

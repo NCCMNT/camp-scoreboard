@@ -1127,8 +1127,16 @@
         async function checkAuth() {
             const res = await fetch('/api/auth', { credentials: 'same-origin' });
             if (res.ok) {
+                // restore persisted counselor name for this session
+                counselorName = sessionStorage.getItem('counselorName') || '';
                 loadCounselorPanel();
                 return;
+            }
+
+            const stored = sessionStorage.getItem('counselorName');
+            if (stored) {
+                const nameInput = document.getElementById('counselor-name-input');
+                if (nameInput) nameInput.value = stored;
             }
 
             document.getElementById('login-section').style.display = 'block';
@@ -1143,6 +1151,7 @@
 
             const res = await fetch('/api/login', { method: 'POST', body: formData, credentials: 'same-origin' });
             if (res.ok) {
+                try { sessionStorage.setItem('counselorName', counselorName); } catch (e) { /* ignore storage errors */ }
                 loadCounselorPanel();
             } else {
                 showToast('Incorrect Camp PIN', { type: 'error' });
@@ -1156,6 +1165,7 @@
 
             try {
                 await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+                try { sessionStorage.removeItem('counselorName'); } catch (e) {}
                 window.location.reload();
             } catch (error) {
                 button.textContent = 'Logout failed — retry';
@@ -1519,7 +1529,7 @@
                         <div class="log-entry-meta">
                             <span>${escapeHtml(log.timestamp)}</span>
                             <span>·</span>
-                            <span>${escapeHtml(dayLabel)}</span>
+                            <span style="font-weight: bold; color: white;">${escapeHtml(dayLabel)}</span>
                             <span>·</span>
                             <span>${who}</span>
                         </div>
