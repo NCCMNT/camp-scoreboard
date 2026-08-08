@@ -284,7 +284,34 @@
         }
 
         .actions-toggle-btn {
-            display: none; /* Hidden on desktop */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: none; /* arrow-only button */
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 0;
+            position: absolute;
+            right: 1rem; /* desktop: sit at the right edge of the panel */
+            top: -18px;
+            z-index: 60;
+            transition: transform 0.12s ease, color 0.12s ease;
+        }
+
+        .actions-toggle-btn:hover {
+            color: var(--text);
+            transform: translateY(-2px);
+        }
+
+        .actions-toggle-svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+            color: currentColor;
         }
 
         .bottom-actions button {
@@ -426,37 +453,21 @@
                 transition: background-color 0.2s ease, border-color 0.2s ease;
             }
 
-            /* Centered Curved Tab Handle */
+            /* Mobile: center a compact arrow-only button above the panel */
             .actions-toggle-btn {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: absolute;
-                top: -12px;
+                right: auto;
                 left: 50%;
                 transform: translateX(-50%);
-                width: 84px;
-                height: 28px;
-                background-color: var(--bg-card);
-                border: 1px solid var(--border);
-                border-bottom: none;
-                border-radius: 12px 12px 0 0; /* Curve edges around the arrow */
-                cursor: pointer;
-                z-index: 60;
-                padding: 0;
-                box-shadow: 0 -6px 18px rgba(0,0,0,0.28);
+                top: -12px;
+                width: 40px;
+                height: 40px;
             }
 
             .actions-toggle-svg {
-                width: 32px;
-                height: 10px;
-                color: var(--muted);
-                transition: transform 0.25s ease, color 0.15s ease;
-            }
-
-            .actions-toggle-btn:hover .actions-toggle-svg,
-            .actions-toggle-btn:active .actions-toggle-svg {
-                color: var(--text);
+                width: 20px;
+                height: 12px;
+                color: currentColor;
+                transition: transform 0.18s ease, color 0.12s ease;
             }
 
             .bottom-actions-grid {
@@ -478,15 +489,14 @@
             }
 
             .bottom-actions.collapsed .actions-toggle-btn {
-                /* Keep the toggle positioned above the panel even when collapsed */
+                /* Keep the small arrow button above the panel when collapsed */
                 top: -12px;
-                border-bottom: 1px solid var(--border);
-                border-radius: 10px 10px 0 0;
-                box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+                transform: translateX(-50%) rotate(0deg);
+                box-shadow: none;
             }
 
             .bottom-actions.collapsed .actions-toggle-svg {
-                transform: rotate(180deg); /* Flips wide arrow when collapsed */
+                transform: rotate(180deg); /* flip arrow when collapsed */
             }
 
             .bottom-actions.collapsed .bottom-actions-grid {
