@@ -47,7 +47,6 @@
             text-align: center;
             background: transparent;
             border: none;
-            border-bottom: 1px dashed var(--border);
             color: var(--text);
             font-family: inherit;
             font-size: 1rem;
@@ -1271,7 +1270,7 @@
         async function handleLogout() {
             const button = document.getElementById('logout-button');
             button.disabled = true;
-            button.textContent = 'Logging out…';
+            button.textContent = '…';
 
             try {
                 await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
