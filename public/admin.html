@@ -7,20 +7,17 @@
     <link rel="stylesheet" href="style.css">
     <style>
         @font-face {
-            font-family: 'Insula';
-            src: url('fonts/INSULA__.ttf') format('truetype'),
-                 url('INSULA__.ttf') format('truetype');
+            font-family: 'Constantine';
+            src: url('fonts/Constantine.ttf') format('truetype'),
+                 url('Constantine.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
         }
 
-        h2, h3,
-        p,
-        .modal-message,
-        #camp-day-indicator,
-        .team-title-input {
-            font-family: 'Insula', system-ui, sans-serif !important;
+        .team-title-input,
+        .emblem-fallback {
+            font-family: 'Constantine', system-ui, sans-serif !important;
         }
 
         .controls-list {
@@ -126,7 +123,6 @@
             font-size: 1.3rem;
             font-weight: 800;
             color: var(--text);
-            font-family: 'Insula', sans-serif;
         }
 
         .control-meta {
@@ -161,7 +157,7 @@
             letter-spacing: 0.08rem;
             text-transform: uppercase;
             color: var(--muted);
-            font-family: 'Insula', sans-serif;
+            font-family: 'Constantine', sans-serif;
         }
 
         .overall-points {
@@ -181,7 +177,7 @@
             text-transform: uppercase;
             color: var(--muted);
             opacity: 0.75;
-            font-family: 'Insula', sans-serif;
+            font-family: 'Constantine', sans-serif;
         }
 
         .change-control {
@@ -206,17 +202,14 @@
             font-size: 1.05rem;
             font-weight: 700;
             flex-shrink: 0;
+            appearance: textfield;
+            -moz-appearance: textfield;
         }
 
         .change-value::-webkit-outer-spin-button,
         .change-value::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
-        }
-
-        .change-value {
-            appearance: textfield;
-            -moz-appearance: textfield;
         }
 
         .change-button {
@@ -270,17 +263,30 @@
             margin-bottom: 1.25rem;
         }
 
+        /* --- NON-TRANSPARENT & COLLAPSIBLE BOTTOM ACTIONS --- */
         .bottom-actions {
             position: sticky;
             bottom: 0;
+            margin-top: 1.75rem;
+            padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+            width: 100%;
+            background-color: var(--bg-card); /* Solid non-transparent background */
+            border-top: 1px solid var(--border);
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+            z-index: 50;
+        }
+
+        .bottom-actions-grid {
             display: grid;
             grid-template-columns: 0.9fr 1fr 1.3fr 1.5fr;
             gap: 0.5rem;
-            margin-top: 1.75rem;
-            padding: 0.85rem 0 calc(0.85rem + env(safe-area-inset-bottom));
             width: 100%;
-            background: linear-gradient(to top, var(--bg-main) 75%, transparent);
-            z-index: 50;
+            transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
+        }
+
+        .actions-toggle-btn {
+            display: none; /* Hidden on desktop */
         }
 
         .bottom-actions button {
@@ -405,15 +411,51 @@
             filter: none !important;
         }
 
+        /* --- MOBILE LAYOUT & COLLAPSIBLE STYLES --- */
         @media (max-width: 640px) {
             .block-container {
                 margin-top: 0.5rem;
             }
 
             .bottom-actions {
+                padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+            }
+
+            .actions-toggle-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.35rem;
+                width: 100%;
+                padding: 0.3rem 0;
+                background: transparent;
+                border: none;
+                color: var(--muted);
+                font-size: 0.75rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                cursor: pointer;
+            }
+
+            .actions-toggle-btn::before {
+                content: none;
+            }
+
+            .bottom-actions-grid {
                 grid-template-columns: 0.8fr 1.1fr 1.1fr;
                 gap: 0.55rem;
-                padding-top: 0.75rem;
+                max-height: 260px;
+                opacity: 1;
+                overflow: hidden;
+            }
+
+            /* Collapsed State on Mobile */
+            .bottom-actions.collapsed .bottom-actions-grid {
+                max-height: 0;
+                opacity: 0;
+                margin: 0;
+                pointer-events: none;
             }
 
             .bottom-actions .snapshot-button {
@@ -613,11 +655,18 @@
                 <a href="#" onclick="exitEditingDay(); return false;" style="color: inherit; text-decoration: underline;">Back to today</a>
             </div>
             <div id="counselor-rows" class="controls-list"></div>
-            <div class="bottom-actions">
-                <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
-                <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
-                <button type="button" id="sync-button" class="sync-button" onclick="syncToSheets()">Sync</button>
-                <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
+
+            <!-- Sticky & Non-Transparent Bottom Actions -->
+            <div class="bottom-actions" id="bottom-actions">
+                <button type="button" class="actions-toggle-btn" onclick="toggleMobileActions()" id="actions-toggle-btn">
+                    <span id="actions-toggle-icon">▼</span> Quick Actions
+                </button>
+                <div class="bottom-actions-grid" id="bottom-actions-grid">
+                    <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
+                    <button type="button" id="reopen-trigger-button" class="reopen-trigger-button" onclick="openReopenModal()">Edit day</button>
+                    <button type="button" id="sync-button" class="sync-button" onclick="syncToSheets()">Sync</button>
+                    <button type="button" id="snapshot-button" class="snapshot-button" onclick="captureSnapshot()"></button>
+                </div>
             </div>
         </div>
     </div>
@@ -674,6 +723,15 @@
             toast.classList.add('is-visible');
             clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => toast.classList.remove('is-visible'), duration);
+        }
+
+        function toggleMobileActions() {
+            const container = document.getElementById('bottom-actions');
+            const icon = document.getElementById('actions-toggle-icon');
+            const isCollapsed = container.classList.toggle('collapsed');
+            if (icon) {
+                icon.textContent = isCollapsed ? '▲' : '▼';
+            }
         }
 
         function formatErrorDetail(detail, fallback) {
@@ -818,69 +876,116 @@
 
         function bindChangeInput(cleanKey) {
             const input = document.getElementById(`input-${cleanKey}`);
-            input.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    submitScore(cleanKey);
-                }
-            });
+            if (input) {
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        submitScore(cleanKey);
+                    }
+                });
+            }
         }
 
         function adjustChange(cleanKey, delta) {
             setChangeValue(cleanKey, getChangeValue(cleanKey) + delta);
         }
 
+        /* --- PROMISE-BASED EMBLEM UPLOAD SYSTEM --- */
         function triggerUpload(cleanKey) {
+            console.log('Triggering upload for team key:', cleanKey);
             activeUploadKey = cleanKey;
-            document.getElementById('emblem-file-input').click();
+
+            const fileInput = document.getElementById('emblem-file-input');
+            if (!fileInput) {
+                console.error('File input element #emblem-file-input not found in DOM!');
+                return;
+            }
+
+            fileInput.value = '';
+            fileInput.click();
         }
 
-        document.getElementById('emblem-file-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file || !activeUploadKey) return;
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const size = Math.min(img.width, img.height);
-                    canvas.width = size;
-                    canvas.height = size;
-                    
-                    const ctx = canvas.getContext('2d');
-                    const xOffset = (img.width - size) / 2;
-                    const yOffset = (img.height - size) / 2;
-                    ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, size, size);
-                    
-                    canvas.toBlob(async (blob) => {
-                        const formData = new FormData();
-                        formData.append('emblem', blob, `${activeUploadKey}.png`);
-                        formData.append('team_key', activeUploadKey);
-
+        function processImageToSquarePng(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('Failed to read selected file.'));
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onerror = () => reject(new Error('Failed to load image data.'));
+                    img.onload = () => {
                         try {
-                            const res = await fetch('/api/upload-emblem', {
-                                method: 'POST',
-                                body: formData
-                            });
-                            if (res.ok) {
-                                const imgElement = document.querySelector(`#tile-${activeUploadKey} .team-emblem img`);
-                                if (imgElement) {
-                                    imgElement.src = `emblems/${activeUploadKey}.png?t=${Date.now()}`;
-                                    imgElement.style.display = 'block'; 
+                            const canvas = document.createElement('canvas');
+                            const size = Math.min(img.width, img.height);
+                            canvas.width = size;
+                            canvas.height = size;
+
+                            const ctx = canvas.getContext('2d');
+                            const xOffset = (img.width - size) / 2;
+                            const yOffset = (img.height - size) / 2;
+
+                            ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, size, size);
+
+                            canvas.toBlob((blob) => {
+                                if (blob) {
+                                    resolve(blob);
+                                } else {
+                                    reject(new Error('Canvas export to Blob failed.'));
                                 }
-                            } else {
-                                showToast('Failed to save emblem.', { type: 'error' });
-                            }
-                        } catch (err) {
-                            showToast('Network error while saving emblem.', { type: 'error' });
+                            }, 'image/png');
+                        } catch (canvasErr) {
+                            reject(canvasErr);
                         }
-                    }, 'image/png');
+                    };
+                    img.src = event.target.result;
                 };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-            e.target.value = '';
+                reader.readAsDataURL(file);
+            });
+        }
+
+        document.getElementById('emblem-file-input').addEventListener('change', async function(e) {
+            const file = e.target.files && e.target.files[0];
+            console.log('File picked:', file?.name, '| Target key:', activeUploadKey);
+
+            if (!file) return;
+
+            if (!activeUploadKey) {
+                showToast('Error: No team selected for upload.', { type: 'error' });
+                return;
+            }
+
+            showToast('Processing image...');
+
+            try {
+                const blob = await processImageToSquarePng(file);
+
+                const formData = new FormData();
+                formData.append('emblem', blob, `${activeUploadKey}.png`);
+                formData.append('team_key', activeUploadKey);
+
+                console.log('Sending POST request to /api/upload-emblem...');
+
+                const res = await fetch('/api/upload-emblem', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                if (res.ok) {
+                    showToast('Emblem updated successfully!');
+                    const imgElement = document.querySelector(`#tile-${activeUploadKey} .team-emblem img`);
+                    if (imgElement) {
+                        imgElement.src = `emblems/${activeUploadKey}.png?t=${Date.now()}`;
+                        imgElement.style.display = 'block';
+                    }
+                } else {
+                    const errData = await res.json().catch(() => null);
+                    console.error('Server returned error on upload:', res.status, errData);
+                    showToast(formatErrorDetail(errData?.detail, 'Failed to save emblem on server.'), { type: 'error' });
+                }
+            } catch (err) {
+                console.error('Client-side processing error:', err);
+                showToast('Error processing or uploading image.', { type: 'error' });
+            }
         });
 
         async function checkAuth() {
@@ -900,7 +1005,7 @@
             formData.append('pin', pin);
 
             const res = await fetch('/api/login', { method: 'POST', body: formData, credentials: 'same-origin' });
-            if(res.ok) {
+            if (res.ok) {
                 loadCounselorPanel();
             } else {
                 showToast('Incorrect Camp PIN', { type: 'error' });
@@ -1293,6 +1398,7 @@
                 setSavingState(cleanKey, false);
             }
         }
+
         checkAuth();
     </script>
 </body>
