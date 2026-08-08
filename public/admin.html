@@ -409,31 +409,53 @@
             filter: none !important;
         }
 
-        /* --- MOBILE LAYOUT & COLLAPSIBLE STYLES --- */
         @media (max-width: 640px) {
             .block-container {
                 margin-top: 0.5rem;
             }
 
             .bottom-actions {
-                padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+                position: sticky;
+                bottom: 0;
+                overflow: visible; /* Allows curved arrow tab to extend above panel */
+                padding: 0.75rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+                background-color: var(--bg-card);
+                border-top: 1px solid var(--border);
+                border-radius: 12px 12px 0 0;
+                box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+                transition: background-color 0.2s ease, border-color 0.2s ease;
             }
 
+            /* Centered Curved Tab Handle */
             .actions-toggle-btn {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 0.35rem;
-                width: 100%;
-                padding: 0.3rem 0;
-                background: transparent;
-                border: none;
-                color: var(--muted);
-                font-size: 0.75rem;
-                font-weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 0.06em;
+                position: absolute;
+                top: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 72px;
+                height: 21px;
+                background-color: var(--bg-card);
+                border: 1px solid var(--border);
+                border-bottom: none;
+                border-radius: 12px 12px 0 0; /* Curve edges around the arrow */
                 cursor: pointer;
+                z-index: 51;
+                padding: 0;
+            }
+
+            .actions-toggle-svg {
+                width: 32px;
+                height: 10px;
+                color: var(--muted);
+                transition: transform 0.25s ease, color 0.15s ease;
+            }
+
+            .actions-toggle-btn:hover .actions-toggle-svg,
+            .actions-toggle-btn:active .actions-toggle-svg {
+                color: var(--text);
             }
 
             .bottom-actions-grid {
@@ -442,9 +464,30 @@
                 max-height: 260px;
                 opacity: 1;
                 overflow: hidden;
+                transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
             }
 
-            /* Collapsed State on Mobile */
+            /* Collapsed State: Makes left and right space fully transparent */
+            .bottom-actions.collapsed {
+                background-color: transparent;
+                border-top-color: transparent;
+                box-shadow: none;
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+
+            .bottom-actions.collapsed .actions-toggle-btn {
+                bottom: 0;
+                top: auto;
+                border-bottom: 1px solid var(--border);
+                border-radius: 10px 10px 0 0;
+                box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+            }
+
+            .bottom-actions.collapsed .actions-toggle-svg {
+                transform: rotate(180deg); /* Flips wide arrow when collapsed */
+            }
+
             .bottom-actions.collapsed .bottom-actions-grid {
                 max-height: 0;
                 opacity: 0;
@@ -462,15 +505,6 @@
                 height: 2.85rem;
                 font-size: 0.82rem;
                 padding-inline: 0.35rem;
-            }
-
-            .change-value {
-                width: 3.8rem;
-                font-size: 0.95rem;
-            }
-
-            .change-button {
-                width: 2.75rem;
             }
         }
 
@@ -650,10 +684,11 @@
             </div>
             <div id="counselor-rows" class="controls-list"></div>
 
-            <!-- Sticky & Non-Transparent Bottom Actions -->
             <div class="bottom-actions" id="bottom-actions">
-                <button type="button" class="actions-toggle-btn" onclick="toggleMobileActions()" id="actions-toggle-btn">
-                    <span id="actions-toggle-icon">▼</span> Quick Actions
+                <button type="button" class="actions-toggle-btn" onclick="toggleMobileActions()" id="actions-toggle-btn" aria-label="Toggle Quick Actions">
+                    <svg class="actions-toggle-svg" viewBox="0 0 28 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 2 2 L 14 8 L 26 2" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </button>
                 <div class="bottom-actions-grid" id="bottom-actions-grid">
                     <button type="button" id="logout-button" class="logout-button" onclick="handleLogout()">Out</button>
@@ -721,11 +756,7 @@
 
         function toggleMobileActions() {
             const container = document.getElementById('bottom-actions');
-            const icon = document.getElementById('actions-toggle-icon');
-            const isCollapsed = container.classList.toggle('collapsed');
-            if (icon) {
-                icon.textContent = isCollapsed ? '▲' : '▼';
-            }
+            container.classList.toggle('collapsed');
         }
 
         function formatErrorDetail(detail, fallback) {
@@ -909,15 +940,17 @@
                     img.onload = () => {
                         try {
                             const canvas = document.createElement('canvas');
-                            const size = Math.min(img.width, img.height);
-                            canvas.width = size;
-                            canvas.height = size;
+                            
+                            const targetSize = 300;
+                            canvas.width = targetSize;
+                            canvas.height = targetSize;
 
                             const ctx = canvas.getContext('2d');
-                            const xOffset = (img.width - size) / 2;
-                            const yOffset = (img.height - size) / 2;
+                            const minDim = Math.min(img.width, img.height);
+                            const xOffset = (img.width - minDim) / 2;
+                            const yOffset = (img.height - minDim) / 2;
 
-                            ctx.drawImage(img, xOffset, yOffset, size, size, 0, 0, size, size);
+                            ctx.drawImage(img, xOffset, yOffset, minDim, minDim, 0, 0, targetSize, targetSize);
 
                             canvas.toBlob((blob) => {
                                 if (blob) {
@@ -925,7 +958,7 @@
                                 } else {
                                     reject(new Error('Canvas export to Blob failed.'));
                                 }
-                            }, 'image/png');
+                            }, 'image/jpeg', 0.85);
                         } catch (canvasErr) {
                             reject(canvasErr);
                         }

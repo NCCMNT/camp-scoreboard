@@ -108,8 +108,9 @@ async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...
     try:
         contents = await emblem.read()
         
+        content_type = emblem.content_type or "image/jpeg"
         encoded_image = base64.b64encode(contents).decode("utf-8")
-        data_url = f"data:image/png;base64,{encoded_image}"
+        data_url = f"data:{content_type};base64,{encoded_image}"
 
         p_color, s_color = "#FFFFFF", "#000000"
         try:
@@ -139,15 +140,17 @@ async def upload_emblem(team_key: str = Form(...), emblem: UploadFile = File(...
 @app.get("/emblems/{filename}")
 async def get_emblem(filename: str):
     """Serve team emblem images directly out of Turso DB."""
-    team_key = filename.replace(".png", "")
+    team_key = Path(filename).stem
     rows = db.execute("SELECT emblem_url FROM teams WHERE team = ?", (team_key,))
     
     if rows and rows[0].get("emblem_url"):
         data_url = rows[0]["emblem_url"]
         if data_url and data_url.startswith("data:image"):
-            _, encoded = data_url.split(",", 1)
+            header, encoded = data_url.split(",", 1)
+            media_type = header.split(";")[0].replace("data:", "") or "image/jpeg"
+            
             img_bytes = base64.b64decode(encoded)
-            return Response(content=img_bytes, media_type="image/png")
+            return Response(content=img_bytes, media_type=media_type)
 
     raise HTTPException(status_code=404, detail="Emblem image not found")
 
