@@ -787,6 +787,20 @@
             color: var(--muted);
         }
 
+        .log-meta-row {
+            display: inline-flex;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        @media (max-width: 640px) {
+            /* Stack timestamp above the rest for mobile */
+            .log-entry-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
         .toast {
             position: fixed;
             left: 50%;
@@ -1654,11 +1668,13 @@
                             <span class="log-change ${changeClass}">${sign}${log.change_val}</span>
                         </div>
                         <div class="log-entry-meta">
-                            <span>${escapeHtml(log.timestamp)}</span>
-                            <span>·</span>
-                            <span style="font-weight: bold; color: white;">${displayDay}</span>
-                            <span>·</span>
-                            <span>${who}</span>
+                            <span class="log-ts">${escapeHtml(log.timestamp)}</span>
+                            <div class="log-meta-row">
+                                <span>·</span>
+                                <span class="log-day" style="font-weight: bold; color: white;">${displayDay}</span>
+                                <span>·</span>
+                                <span class="log-who">${who}</span>
+                            </div>
                         </div>
                     </div>
                 `;
