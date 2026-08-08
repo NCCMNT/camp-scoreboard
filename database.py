@@ -167,5 +167,13 @@ class DatabaseManager:
         """)
         self.ensure_columns("logs", {"counselor": "TEXT"})
 
+        # Day Titles Table (e.g. "Red Sea Crossing" for day_2)
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS day_titles (
+                day_col TEXT PRIMARY KEY,
+                title TEXT
+            )
+        """)
+
 
 db = DatabaseManager()

@@ -248,12 +248,38 @@ async def day_columns():
     current_day_col = configured_days[curr_idx] if configured_days and curr_idx < len(configured_days) else None
     current_day_idx = curr_idx + 1 if current_day_col else None
 
+    title_rows = db.execute("SELECT day_col, title FROM day_titles")
+    day_titles = {row["day_col"]: row["title"] for row in title_rows if row.get("title")}
+
     return {
         "days": configured_days,
         "summaryColumn": POINTS_COLUMN,
         "currentDayColumn": current_day_col,
-        "currentDayIndex": current_day_idx
+        "currentDayIndex": current_day_idx,
+        "dayTitles": day_titles,
+        "currentDayTitle": day_titles.get(current_day_col) if current_day_col else None
     }
+
+
+@app.post("/api/day-title", dependencies=[Depends(verify_session)])
+async def set_day_title(
+    day: str = Form(...),
+    title: str = Form("")
+):
+    """Assign or update the display title for a given day column."""
+    configured_days = configured_day_columns()
+    if day not in configured_days:
+        raise HTTPException(status_code=400, detail="Invalid day column")
+
+    clean_title = title.strip()[:80]
+
+    existing = db.execute("SELECT day_col FROM day_titles WHERE day_col = ?", (day,))
+    if existing:
+        db.execute("UPDATE day_titles SET title = ? WHERE day_col = ?", (clean_title, day))
+    else:
+        db.execute("INSERT INTO day_titles (day_col, title) VALUES (?, ?)", (day, clean_title))
+
+    return {"status": "success", "day": day, "title": clean_title}
 
 
 @app.post("/api/update-score", dependencies=[Depends(verify_session)])
@@ -373,8 +399,11 @@ async def get_all_days():
         current_active_day = configured_days[idx]
         selectable_days = configured_days[:idx + 1]
 
+        title_rows = db.execute("SELECT day_col, title FROM day_titles")
+        day_titles = {row["day_col"]: row["title"] for row in title_rows if row.get("title")}
+
         days_payload = [
-            {"column": col, "label": col.capitalize().replace('_', ' ')}
+            {"column": col, "label": col.capitalize().replace('_', ' '), "title": day_titles.get(col, "")}
             for col in selectable_days
         ]
 

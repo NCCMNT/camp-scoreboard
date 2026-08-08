@@ -39,6 +39,39 @@
             filter: saturate(0.95) contrast(0.98);
         }
 
+        .day-title-input {
+            display: block;
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto 1.1rem;
+            text-align: center;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed var(--border);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 700;
+            padding: 0.3rem 0.5rem;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+
+        .day-title-input::placeholder {
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .day-title-input:hover, .day-title-input:focus {
+            border-color: var(--accent-dim);
+            background-color: var(--bg-main);
+            outline: none;
+        }
+
+        .day-title-input:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
         .controls-list {
             display: grid;
             gap: 0.9rem;
@@ -84,41 +117,6 @@
             background-color: var(--bg-main);
             color: var(--text);
         }
-
-        .auth-input {
-            background-color: var(--bg-main);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 8px;
-            padding: 0.7rem;
-            font-family: var(--font);
-            font-size: 1rem;
-            outline: none;
-            width: 100%;
-            margin: 1rem 0 0;
-            transition: border-color 0.2s;
-        }
-
-        .auth-input:focus {
-            border-color: var(--accent);
-        }
-
-        .auth-button {
-            width: 100%;
-            margin-top: 0.9rem;
-            height: 3rem;
-            background-color: var(--change-flat);
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: filter 0.12s, transform 0.08s;
-        }
-
-        .auth-button:hover:not(:disabled) { filter: brightness(1.06); }
-        .auth-button:active:not(:disabled) { filter: brightness(0.92); }
 
         .control-tile {
             position: relative;
@@ -531,6 +529,7 @@
                 transition: background-color 0.2s ease, border-color 0.2s ease;
             }
 
+            /* Mobile: center a compact arrow-only button above the panel */
             .actions-toggle-btn {
                 right: auto;
                 left: 50%;
@@ -801,10 +800,13 @@
             <input type="text" id="counselor-name-input" class="auth-input" placeholder="Your name">
             <input type="password" id="pin-input" class="auth-input" placeholder="Enter PIN">
             <button onclick="handleLogin()" class="auth-button">Login</button>
+        </div>
+
         <!-- Authenticated Controls View Container -->
         <div id="controls-section" style="display: none;">
             <h2 style="text-align: center;">EXODUS FUNTIME</h2>
             <p id="camp-day-indicator" style="color: var(--muted); text-align: center; margin-top: -0.75rem; margin-bottom: 0.5rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08rem;"></p>
+            <input type="text" id="day-title-input" class="day-title-input" placeholder="Add a title for this day…" maxlength="80" onblur="saveDayTitle()" onkeydown="if (event.key === 'Enter') { this.blur(); }">
             <div id="editing-day-banner" style="display: none; text-align: center; margin-bottom: 1.25rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06rem; color: var(--accent-dim);">
                 <span id="editing-day-label"></span>
                 &nbsp;·&nbsp;
@@ -922,20 +924,22 @@
         let currentDayColumn = null;
         let currentDayIndex = null;
         let editingDayColumn = null;
+        let dayTitles = {};
 
         async function fetchConfig() {
             try {
                 const res = await fetch('/api/day-columns', { credentials: 'same-origin' });
-                if (!res.ok) return { days: [], summaryColumn: null, currentDayColumn: null, currentDayIndex: null };
+                if (!res.ok) return { days: [], summaryColumn: null, currentDayColumn: null, currentDayIndex: null, dayTitles: {} };
                 const data = await res.json();
                 return {
                     days: Array.isArray(data.days) ? data.days : [],
                     summaryColumn: data.summaryColumn ?? null,
                     currentDayColumn: data.currentDayColumn ?? null,
-                    currentDayIndex: data.currentDayIndex ?? null
+                    currentDayIndex: data.currentDayIndex ?? null,
+                    dayTitles: data.dayTitles && typeof data.dayTitles === 'object' ? data.dayTitles : {}
                 };
             } catch (error) {
-                return { days: [], summaryColumn: null, currentDayColumn: null, currentDayIndex: null };
+                return { days: [], summaryColumn: null, currentDayColumn: null, currentDayIndex: null, dayTitles: {} };
             }
         }
 
@@ -1001,6 +1005,50 @@
             }
             btn.textContent = dayIsActive ? `Finish day ${currentDayIndex}` : 'All Days Captured';
             btn.disabled = !dayIsActive;
+
+            updateDayTitleInput();
+        }
+
+        function updateDayTitleInput() {
+            const input = document.getElementById('day-title-input');
+            if (!input) return;
+            const col = getEffectiveDayColumn();
+            input.value = col ? (dayTitles[col] || '') : '';
+            input.disabled = !col;
+        }
+
+        async function saveDayTitle() {
+            const input = document.getElementById('day-title-input');
+            if (!input) return;
+            const col = getEffectiveDayColumn();
+            if (!col) return;
+
+            const newTitle = input.value.trim();
+            if ((dayTitles[col] || '') === newTitle) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('day', col);
+                formData.append('title', newTitle);
+
+                const res = await fetch('/api/day-title', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                if (res.ok) {
+                    dayTitles[col] = newTitle;
+                    showToast(newTitle ? 'Day title saved' : 'Day title cleared');
+                } else {
+                    const data = await res.json().catch(() => null);
+                    showToast(formatErrorDetail(data?.detail, 'Could not save day title'), { type: 'error' });
+                    input.value = dayTitles[col] || '';
+                }
+            } catch (err) {
+                showToast('Network error saving day title', { type: 'error' });
+                input.value = dayTitles[col] || '';
+            }
         }
 
         function getCleanKey(teamName) {
@@ -1219,6 +1267,7 @@
             summaryColumn = config.summaryColumn;
             currentDayColumn = config.currentDayColumn;
             currentDayIndex = config.currentDayIndex;
+            dayTitles = config.dayTitles;
             const data = await res.json();
 
             data.sort((a, b) => getTeamName(a).localeCompare(getTeamName(b)));
@@ -1322,6 +1371,7 @@
                 summaryColumn = config.summaryColumn;
                 currentDayColumn = config.currentDayColumn;
                 currentDayIndex = config.currentDayIndex;
+                dayTitles = config.dayTitles;
                 const data = await res.json();
 
                 updateDayIndicator();
@@ -1498,7 +1548,8 @@
                         const option = document.createElement('option');
                         option.value = day.column;
                         const isActive = day.column === data.active_day;
-                        option.textContent = isActive ? `${day.label} (Today)` : day.label;
+                        const label = day.title ? `${day.label} — ${day.title}` : day.label;
+                        option.textContent = isActive ? `${label} (Today)` : label;
                         if (day.column === (editingDayColumn || data.active_day)) option.selected = true;
                         dropdown.appendChild(option);
                     });
@@ -1550,7 +1601,12 @@
             list.innerHTML = logs.map(log => {
                 const sign = log.change_val > 0 ? '+' : '';
                 const changeClass = log.change_val > 0 ? 'log-positive' : 'log-negative';
-                const dayLabel = (log.day_col || '').replace(/_/g, ' ');
+                const dayKey = log.day_col || '';
+                const dayLabel = (dayKey).replace(/_/g, ' ');
+                const title = (typeof dayTitles === 'object' && dayTitles[dayKey]) ? String(dayTitles[dayKey]) : '';
+                const dayIdx = (Array.isArray(dayColumns) ? dayColumns.indexOf(dayKey) : -1);
+                const dayNumberPart = dayIdx >= 0 ? ` (Day ${dayIdx + 1})` : '';
+                const displayDay = title ? `${escapeHtml(title)}${dayNumberPart}` : `${escapeHtml(dayLabel)}${dayNumberPart}`;
                 const who = log.counselor ? escapeHtml(log.counselor) : 'Unknown';
                 return `
                     <div class="log-entry">
@@ -1561,7 +1617,7 @@
                         <div class="log-entry-meta">
                             <span>${escapeHtml(log.timestamp)}</span>
                             <span>·</span>
-                            <span style="font-weight: bold; color: white;">${escapeHtml(dayLabel)}</span>
+                            <span style="font-weight: bold; color: white;">${displayDay}</span>
                             <span>·</span>
                             <span>${who}</span>
                         </div>
