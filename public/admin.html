@@ -97,35 +97,6 @@
             font-family: inherit;
         }
 
-        #login-section .auth-input::placeholder,
-        #login-section .auth-input::-webkit-input-placeholder,
-        #login-section .auth-input::-moz-placeholder,
-        #login-section .auth-input:-ms-input-placeholder {
-            color: var(--muted);
-            font-weight: 600;
-            opacity: 1;
-        }
-
-        #login-section .auth-input {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            text-align: left;
-            vertical-align: middle;
-        }
-
-        #login-section .auth-input::-ms-clear,
-        #login-section .auth-input::-ms-reveal,
-        #login-section .auth-input::-webkit-clear-button,
-        #login-section .auth-input::-webkit-reveal-button,
-        #login-section .auth-input::-webkit-password-reveal-button,
-        #login-section .auth-input::-webkit-textfield-decoration-container,
-        #login-section .auth-input::-webkit-credentials-auto-fill-button {
-            display: none !important;
-            width: 0 !important;
-            height: 0 !important;
-        }
-
         .auth-button {
             display: block;
             margin: 0.8rem auto 0;
@@ -133,7 +104,6 @@
             width: 100%;
             max-width: 320px;
             font-size: 1rem;
-            font-weight: 800;
             color: #ffffff;
             background: var(--change-flat);
             border: none;
@@ -144,6 +114,10 @@
         }
 
         .auth-button:hover { filter: brightness(1.06); }
+
+        #login-section input[type="password"].auth-input {
+            padding: 0.6rem 0.9rem !important;
+        }
 
 
         .team-title-input:hover, .team-title-input:focus {
