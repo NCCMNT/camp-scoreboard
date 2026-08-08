@@ -5,7 +5,7 @@
     --border: #3d352b;           /* Muted canyon rock border */
     --text: #f4eae0;             /* Bleached sand light text */
     --muted: #a69685;            /* Soft dust / dry brush gray */
-    --accent: var(--rank-others-color, #d96b43);
+    --accent: var(--rank-others-color, #c57a2b);
     --first: #e9c244;
     --second: #c9cdd1;
     --accent-glow: rgba(0, 0, 0, 0.08);
